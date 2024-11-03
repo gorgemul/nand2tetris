@@ -1,0 +1,99 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/08/FunctionCalls/SimpleFunction/SimpleFunction.vm
+
+// Performs a simple calculation and returns the result.
+function SimpleFunction.test 2
+push local 0
+push local 1
+add
+not
+push argument 0
+add
+push argument 1
+sub
+return
+
+
+(SimpleFunction.test)
+  @0
+  D=A
+  @LCL
+  A=M+D
+  M=0
+  @1
+  D=A
+  @LCL
+  A=M+D
+  M=0
+-----------------------
+  @LCL
+  D=M
+  @R13
+  M=D
+
+  @5
+  D=A
+  @R13
+  A=M-D
+  D=M
+  @R14
+  M=D
+
+  popFromStack()
+  @ARG
+  A=M
+  M=D
+
+  @ARG
+  D=M+1
+  @SP
+  M=D
+
+  @1
+  D=A
+  @R13
+  A=M-D
+  D=M
+  @THAT
+  M=D
+
+  @2
+  D=A
+  @R13
+  A=M-D
+  D=M
+  @THIS
+  M=D
+
+  @3
+  D=A
+  @R13
+  A=M-D
+  D=M
+  @ARG
+  M=D
+
+  @4
+  D=A
+  @R13
+  A=M-D
+  D=M
+  @LCL
+  M=D
+
+  @R14
+  A=M
+  0;JMP
+  
+
+
+
+  
+
+
+
+  
+  
+  
