@@ -9,7 +9,7 @@ enum LineType {
 };
 
 enum Length {
-    BASENAME_LENGTH = 256,
+    BASENAME_MAX_LENGTH = 256,
     LINE_MAX_LENGTH = 1024,
     ADDR_MAX_LENGTH = 32767,
     BI_INSTRUCTION_LENGTH = 16,
@@ -27,12 +27,11 @@ char *get_dst_path(char *src_path)
 
     if ((to = strchr(from, '.')) == NULL) return NULL;
 
-    char *buf = malloc(sizeof(*buf) * BASENAME_LENGTH);
+    char *buf = malloc(sizeof(*buf) * BASENAME_MAX_LENGTH);
     int length = to - from;
 
     memcpy(buf, from, length);
     buf[length] = '\0';
-
     strcat(buf, ".hack");
 
     return buf;
@@ -305,8 +304,12 @@ void translate_A_instruction(char *asm_instr, FILE *dst)
 {
     char bi_instr[BI_INSTRUCTION_LENGTH+1] = {0};
 
-    char *decimal_addr = asm_instr + 1;
-    char *bi_addr = decimal_to_binary(atoi(decimal_addr));
+    char *str_addr = asm_instr + 1;
+    char *end_ptr = NULL;
+    int decimal_addr = strtol(str_addr, &end_ptr, 10);
+    if (end_ptr == str_addr) return; // TODO: Should handle the situation for symbol
+
+    char *bi_addr = decimal_to_binary(decimal_addr);
 
     strcat(bi_instr, "0");
     strcat(bi_instr, bi_addr);
