@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define BUCKET_NUM 12
+#define SYMBOL_BASE 16
+
 enum LineType {
     COMMENT = '/',
     EMPTY_LINE = '\n',
@@ -17,6 +20,155 @@ enum Length {
     ASM_DEST_MAX_LENGTH = 3,
     ASM_JUMP_MAX_LENGTH = 3,
 };
+
+/* HASH FUNCTION */
+int adler32(const void *buf, size_t buflength) {
+     const char *buffer = (const char*)buf;
+
+     int s1 = 1;
+     int s2 = 0;
+
+     for (size_t n = 0; n < buflength; n++) {
+        s1 = (s1 + buffer[n]) % 65521;
+        s2 = (s2 + s1) % 65521;
+     }
+     return (s2 << 16) | s1;
+}
+
+typedef struct {
+    char *key;
+    int  value;
+} Pair;
+
+typedef struct {
+    int count;
+    Pair *pairs;
+} Bucket;
+
+typedef struct {
+    int count;
+    int var_offset;
+    Bucket *buckets;
+} SymbolMap;
+
+SymbolMap *create_map()
+{
+    SymbolMap *map = malloc(sizeof(*map));
+    if (map == NULL) return NULL;
+
+    Bucket *buckets = malloc(sizeof(*buckets) * BUCKET_NUM);
+    if (buckets == NULL) {
+        free(map);
+        return NULL;
+    }
+    memset(buckets, 0, sizeof(*buckets) * BUCKET_NUM);
+
+    map->count = BUCKET_NUM;
+    map->var_offset = 0;
+    map->buckets = buckets;
+
+    return map;
+}
+
+void destroy_map(SymbolMap *map)
+{
+    for (int i = 0; i < map->count; i++) {
+        Bucket *bucket = &(map->buckets[i]);
+
+        if (bucket->count == 0) continue;
+        for (int j = 0; j < bucket->count; j++) {
+            Pair *pair = &(bucket->pairs[j]);
+            free(pair->key);
+        }
+        free(bucket->pairs);
+    }
+
+    free(map->buckets);
+    free(map);
+}
+
+int get(SymbolMap *map, char *key)
+{
+    int hashCode = adler32(key, strlen(key));
+    int index = hashCode % BUCKET_NUM;
+    Bucket *bucket = &(map->buckets[index]);
+
+    if (bucket->count == 0) return -1;
+
+    for (int i = 0; i < bucket->count; i++) {
+        Pair *pair = &(bucket->pairs[i]);
+        if (strcmp(pair->key, key) == 0) return pair->value;
+    }
+
+    return -1;
+}
+
+int put(SymbolMap *map, char *key, int val)
+{
+    int hashCode = adler32(key, strlen(key));
+    int index = hashCode % BUCKET_NUM;
+    Bucket *bucket = &(map->buckets[index]);
+
+    for (int i = 0; i < bucket->count; i++) {
+        Pair *pair = &(bucket->pairs[i]);
+        if (strcmp(pair->key, key) == 0) {
+            pair->value = val;
+            return 0;
+        }
+    }
+
+    bucket->count++;
+
+    Pair *new_pairs = realloc(bucket->pairs, sizeof(*new_pairs) * bucket->count);
+    if (new_pairs == NULL) return -1;
+
+    char *new_key = malloc(sizeof(*new_key) * (strlen(key)+1));
+    if (new_key == NULL) {
+        free(new_pairs);
+        return -1;
+    }
+
+    bucket->pairs = new_pairs;
+    Pair *new_pair = &(bucket->pairs[(bucket->count)-1]);
+    new_pair->key = new_key;
+    strcpy(new_key, key);
+    new_pair->value = val;
+
+    return 0;
+}
+
+void append_variable(SymbolMap *map, char *key)
+{
+    int index = map->var_offset + SYMBOL_BASE;
+    map->var_offset++;
+    put(map, key, index);
+}
+
+void seed(SymbolMap *map)
+{
+    put(map, "R0", 0);
+    put(map, "R1", 1);
+    put(map, "R2", 2);
+    put(map, "R3", 3);
+    put(map, "R4", 4);
+    put(map, "R5", 5);
+    put(map, "R6", 6);
+    put(map, "R7", 7);
+    put(map, "R8", 8);
+    put(map, "R9", 9);
+    put(map, "R10", 10);
+    put(map, "R11", 11);
+    put(map, "R12", 12);
+    put(map, "R13", 13);
+    put(map, "R14", 14);
+    put(map, "R15", 15);
+
+    put(map, "SP", 0);
+    put(map, "LCL", 1);
+    put(map, "ARG", 2);
+    put(map, "THIS", 3);
+    put(map, "THAT", 4);
+}
 
 char *get_dst_path(char *src_path)
 {
@@ -307,7 +459,8 @@ void translate_A_instruction(char *asm_instr, FILE *dst)
     char *str_addr = asm_instr + 1;
     char *end_ptr = NULL;
     int decimal_addr = strtol(str_addr, &end_ptr, 10);
-    if (end_ptr == str_addr) return; // TODO: Should handle the situation for symbol
+
+    if (end_ptr == str_addr) return; // TODO:
 
     char *bi_addr = decimal_to_binary(decimal_addr);
 
@@ -352,7 +505,6 @@ void scan_src(FILE *src, FILE *dst)
             break;
         }
     }
-
 }
 
 int main(int argc, char **argv)
