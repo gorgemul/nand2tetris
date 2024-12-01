@@ -8,6 +8,7 @@
 enum LineType {
     COMMENT = '/',
     EMPTY_LINE = '\n',
+    LABEL = '(',
     A_INSTRUCTION = '@',
 };
 
@@ -140,8 +141,10 @@ int put(SymbolMap *map, char *key, int val)
 void append_variable(SymbolMap *map, char *key)
 {
     int index = map->var_offset + SYMBOL_BASE;
-    map->var_offset++;
+
     put(map, key, index);
+
+    map->var_offset++;
 }
 
 void seed(SymbolMap *map)
@@ -168,6 +171,9 @@ void seed(SymbolMap *map)
     put(map, "ARG", 2);
     put(map, "THIS", 3);
     put(map, "THAT", 4);
+
+    put(map, "SCREEN", 16384);
+    put(map, "KBD", 24576);
 }
 
 char *get_dst_path(char *src_path)
@@ -410,7 +416,7 @@ void translate_JUMP(char *bi_instr, char *asm_instr)
     char *to = strchr(asm_instr, '\n');
     int length = to - from;
 
-    memcpy(asm_jump, from ,length);
+    memcpy(asm_jump, from, length);
     asm_jump[length] = '\0';
 
     if (strcmp(asm_jump, "JGT") == 0) {
@@ -452,15 +458,25 @@ ret:
     return;
 }
 
-void translate_A_instruction(char *asm_instr, FILE *dst)
+void translate_A_instruction(char *asm_instr, FILE *dst, SymbolMap *map)
 {
+    printf("asm_instr(%zd)>>>%s", strlen(asm_instr), asm_instr);
     char bi_instr[BI_INSTRUCTION_LENGTH+1] = {0};
+    char *from = asm_instr + 1;
+    char *to = strchr(asm_instr, '\n');
+    int length = to - from;
 
-    char *str_addr = asm_instr + 1;
+    char *str_addr = malloc(sizeof(*str_addr) * (length+1));
+    memcpy(str_addr, from, length);
+    str_addr[length] = '\0';
+
     char *end_ptr = NULL;
     int decimal_addr = strtol(str_addr, &end_ptr, 10);
 
-    if (end_ptr == str_addr) return; // TODO:
+    if (end_ptr == str_addr) {
+        if (get(map, str_addr) == -1) append_variable(map, str_addr);
+        decimal_addr = get(map, str_addr);
+    }
 
     char *bi_addr = decimal_to_binary(decimal_addr);
 
@@ -470,6 +486,7 @@ void translate_A_instruction(char *asm_instr, FILE *dst)
     fputs(bi_instr, dst);
     fputc('\n', dst);
 
+    free(str_addr);
     free(bi_addr);
 }
 
@@ -486,22 +503,60 @@ void translate_C_instruction(char *asm_instr, FILE *dst)
     fputc('\n', dst);
 }
 
-void scan_src(FILE *src, FILE *dst)
+void translate_src(FILE *src, FILE *dst, SymbolMap *map)
 {
     char line[LINE_MAX_LENGTH] = {0};
 
     while(fgets(line, LINE_MAX_LENGTH, src)) {
-        char *asm_instr = trim_preceiding_whitespaces(line);
+        char *trim_line = trim_preceiding_whitespaces(line);
 
-        switch (asm_instr[0]) {
+        switch (trim_line[0]) {
+        case COMMENT:
+        case EMPTY_LINE:
+        case LABEL:
+            continue;
+        case A_INSTRUCTION:
+            translate_A_instruction(trim_line, dst, map);
+            break;
+        default:
+            translate_C_instruction(trim_line, dst);
+            break;
+        }
+    }
+}
+
+void scan_label(char *trim_line, int line_count, SymbolMap *map)
+{
+    char *from = strchr(trim_line, '(') + 1;
+    char *to = strchr(trim_line, ')');
+    int length = to - from;
+
+    char *buf = malloc(sizeof(*buf) * (length+1));
+    memcpy(buf, from, length);
+    buf[length] = '\0';
+
+    put(map, buf, line_count);
+
+    free(buf);
+}
+
+void scan_src(FILE *src, SymbolMap *map)
+{
+    char line[LINE_MAX_LENGTH] = {0};
+    int line_count = 0;
+
+    while(fgets(line, LINE_MAX_LENGTH, src)) {
+        char *trim_line = trim_preceiding_whitespaces(line);
+
+        switch (trim_line[0]) {
         case COMMENT:
         case EMPTY_LINE:
             continue;
-        case A_INSTRUCTION:
-            translate_A_instruction(asm_instr, dst);
+        case LABEL:
+            scan_label(trim_line, line_count, map);
             break;
         default:
-            translate_C_instruction(asm_instr, dst);
+            line_count++;
             break;
         }
     }
@@ -510,6 +565,7 @@ void scan_src(FILE *src, FILE *dst)
 int main(int argc, char **argv)
 {
     int status = EXIT_FAILURE;
+    SymbolMap *map = NULL;
     char *src_path = NULL;
     char *dst_path = NULL;
     FILE *src = NULL;
@@ -528,16 +584,21 @@ int main(int argc, char **argv)
     }
 
     if ((src = fopen(src_path, "r")) == NULL) {
-        fprintf(stderr, "Could not open the files");
+        fprintf(stderr, "Could not open the source file");
         goto clean;
     }
 
     if ((dst = fopen(dst_path, "w")) == NULL) {
-        fprintf(stderr, "Could not open the files");
+        fprintf(stderr, "Could not open the destination file");
         goto clean;
     }
 
-    scan_src(src, dst);
+    map = create_map();
+    seed(map);
+
+    scan_src(src, map);
+    rewind(src);
+    translate_src(src, dst, map);
 
     status = EXIT_SUCCESS;
     printf("======> Success assemble %s\n", src_path);
@@ -545,6 +606,7 @@ int main(int argc, char **argv)
 
 clean:
     if (dst_path) free(dst_path);
+    if (map)      destroy_map(map);
     if (src)      fclose(src);
     if (dst)      fclose(dst);
 ret:
