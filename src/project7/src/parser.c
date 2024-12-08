@@ -29,7 +29,6 @@ char *extract_line_content(const char *line)
 
     return buf;
 }
-
 char *extract_first_token(const char *content)
 {
     const char *from = content;
@@ -105,11 +104,58 @@ Command get_cmd(const char *content)
         goto clean;
     }
 
-    if (cmd == ILLEGAL_CMD) exit(1);
+    if (cmd == ILLEGAL_CMD) {
+        fprintf(stderr, "No such command in the statement!\n");
+        exit(1);
+    }
 
 clean:
     free(token);
+
     return cmd;
+}
+
+void parse_one_token_statement(Statement *s, const char *content, Command cmd)
+{
+    s->cmd = cmd;
+    strcpy(s->arg1, content);
+    s->arg2 = NO_ARG2;
+}
+
+void parse_three_tokens_statement(Statement *s, const char *content, Command cmd)
+{
+    char *from = strchr(content, ' ') + 1;
+    char *to = strchr(from, ' ');
+
+    int seg_len = to - from;
+
+    char *seg_buf = malloc(sizeof(*seg_buf) * (seg_len+1));
+    memcpy(seg_buf, from, seg_len);
+    seg_buf[seg_len] = '\0';
+
+    from = to + 1;
+    to = strchr(from, '\0');
+
+    int offset_len = to - from;
+
+    char *offset_buf = malloc(sizeof(*offset_buf) * (offset_len+1));
+    memcpy(offset_buf, from, offset_len);
+    offset_buf[offset_len] = '\0';
+
+    char *end_ptr = NULL;
+    int offset = strtol(offset_buf, &end_ptr, 10);
+
+    if (end_ptr == offset_buf) {
+        fprintf(stderr, "Illegal offset!\n");
+        exit(1);
+    }
+
+    s->cmd = cmd;
+    strcpy(s->arg1, seg_buf);
+    s->arg2 = offset;
+
+    free(seg_buf);
+    free(offset_buf);
 }
 
 Statement *parser(const char *line)
@@ -122,12 +168,22 @@ Statement *parser(const char *line)
 
     switch (cmd) {
     case C_ARITHMETIC:
-        s->cmd = C_ARITHMETIC;
-        strcpy(s->arg1, content);
-        s->arg2 = NO_ARG2;
+        parse_one_token_statement(s, content, C_ARITHMETIC);
         break;
     case C_PUSH:
-        /* handle_push(s, content); */
+        parse_three_tokens_statement(s, content, C_PUSH);
+        break;
+    case C_POP:
+        parse_three_tokens_statement(s, content, C_POP);
+        break;
+    case C_FUNCTION:
+        parse_three_tokens_statement(s, content, C_FUNCTION);
+        break;
+    case C_CALL:
+        parse_three_tokens_statement(s, content, C_CALL);
+        break;
+    case C_RETURN:
+        parse_one_token_statement(s, content, C_RETURN);
         break;
     default:
         break;

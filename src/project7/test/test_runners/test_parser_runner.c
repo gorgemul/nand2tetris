@@ -16,5 +16,11 @@ TEST_GROUP_RUNNER(parser)
     RUN_TEST_CASE(parser, parser_arithmetic_statement_with_preceiding_whitespaces);
     RUN_TEST_CASE(parser, parser_arithmetic_statement_with_trailing_whitespaces);
     RUN_TEST_CASE(parser, parser_arithmetic_statement_with_trailing_with_comment);
+
     RUN_TEST_CASE(parser, parser_push_statement);
+    RUN_TEST_CASE(parser, parser_pop_statement);
+
+    RUN_TEST_CASE(parser, parser_function_statement);
+    RUN_TEST_CASE(parser, parser_call_statement);
+    RUN_TEST_CASE(parser, parser_return_statement);
 }
