@@ -1,7 +1,7 @@
 #include <unity.h>
 #include <unity_fixture.h>
 
-TEST_GROUP_RUNNER(sub)
+TEST_GROUP_RUNNER(code_writer)
 {
-    RUN_TEST_CASE(sub, sub_ShouldReturn1);
+    RUN_TEST_CASE(code_writer, code_writer_arithmetic_add_statement);
 }

@@ -1,19 +1,27 @@
 #include "code_writer.h"
+#include "type.h"
 #include <unity.h>
 #include <unity_fixture.h>
 
-TEST_SETUP(sub)
+TEST_SETUP(code_writer)
 {
 
 }
 
-TEST_TEAR_DOWN(sub)
+TEST_TEAR_DOWN(code_writer)
 {
 }
 
-TEST_GROUP(sub);
+TEST_GROUP(code_writer);
 
-TEST(sub, sub_ShouldReturn1)
+TEST(code_writer, code_writer_arithmetic_add_statement)
 {
-    TEST_ASSERT_EQUAL(1, sub(3, 2));
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "add",
+        .arg2 = NO_ARG2,
+    };
+
+
+    TEST_ASSERT_EQUAL_INT(C_ARITHMETIC, s.cmd);
 }
