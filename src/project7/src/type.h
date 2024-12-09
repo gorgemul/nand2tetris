@@ -2,6 +2,7 @@
 #define TYPE_H
 
 #define NO_ARG2 -1
+#define TEMP_REGISTER "R13"
 
 typedef enum Command {
     ILLEGAL_CMD = -1,

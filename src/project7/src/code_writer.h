@@ -4,6 +4,6 @@
 #include "type.h"
 #include <stdio.h>
 
-void code_writer(FILE *file, Statement *s);
+void code_writer(FILE *file, Statement *s, const char *vm_file_root);
 
 #endif
