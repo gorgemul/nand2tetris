@@ -1,6 +1,8 @@
 #include "code_writer.h"
 #include <string.h>
 
+int CONDITION_STATEMENT_COUNTER = 0;
+
 void write_comment(FILE *file, Statement *s)
 {
     fprintf(file, "// ");
@@ -44,6 +46,12 @@ void add_D_register_value_with(FILE *file, const char* src)
 {
     fprintf(file, "\t@%s\n", src);
     fprintf(file, "\tD=D+M\n");
+}
+
+void sub_D_register_value_with(FILE *file, const char* src)
+{
+    fprintf(file, "\t@%s\n", src);
+    fprintf(file, "\tD=D-M\n");
 }
 
 void push_D_register_value_to_stack(FILE *file)
@@ -98,16 +106,89 @@ void copy_segment_value_to_D_register(FILE *file, Statement *s, const char *vm_f
     fprintf(file, "\tD=M\n");
 }
 
-void code_writer(FILE *file, Statement *s, const char *vm_file_root)
+void write_arithmetic(FILE *file, Statement *s)
 {
-    switch (s->cmd) {
-    case C_ARITHMETIC:
-        write_comment(file, s);
-        pop_stack_value_to_D_register(file);
+    write_comment(file, s);
+    pop_stack_value_to_D_register(file);
+
+    if (strcmp(s->arg1, "add") == 0) {
         copy_D_register_value_to(file, TEMP_REGISTER);
         pop_stack_value_to_D_register(file);
         add_D_register_value_with(file, TEMP_REGISTER);
         push_D_register_value_to_stack(file);
+        goto ret;
+    }
+
+    if (strcmp(s->arg1, "sub") == 0) {
+        copy_D_register_value_to(file, TEMP_REGISTER);
+        pop_stack_value_to_D_register(file);
+        sub_D_register_value_with(file, TEMP_REGISTER);
+        push_D_register_value_to_stack(file);
+        goto ret;
+    }
+
+    if (strcmp(s->arg1, "neg") == 0) {
+        fprintf(file, "\tD=-D\n");
+        push_D_register_value_to_stack(file);
+        goto ret;
+    }
+
+    if (strcmp(s->arg1, "eq") == 0) {
+        copy_D_register_value_to(file, TEMP_REGISTER);
+        pop_stack_value_to_D_register(file);
+        sub_D_register_value_with(file, TEMP_REGISTER);
+        fprintf(file, "\t@EQ%d\n", ++CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\tD;JEQ\n");
+        fprintf(file, "\tD=0\n");
+        push_D_register_value_to_stack(file);
+        fprintf(file, "\t@NEXT%d\n", CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\t0;JMP\n");
+        fprintf(file, "(EQ%d)\n", CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\tD=-1\n");
+        push_D_register_value_to_stack(file);
+        fprintf(file, "(NEXT%d)\n", CONDITION_STATEMENT_COUNTER);
+    }
+
+    if (strcmp(s->arg1, "gt") == 0) {
+        copy_D_register_value_to(file, TEMP_REGISTER);
+        pop_stack_value_to_D_register(file);
+        sub_D_register_value_with(file, TEMP_REGISTER);
+        fprintf(file, "\t@GT%d\n", ++CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\tD;JGT\n");
+        fprintf(file, "\tD=0\n");
+        push_D_register_value_to_stack(file);
+        fprintf(file, "\t@NEXT%d\n", CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\t0;JMP\n");
+        fprintf(file, "(GT%d)\n", CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\tD=-1\n");
+        push_D_register_value_to_stack(file);
+        fprintf(file, "(NEXT%d)\n", CONDITION_STATEMENT_COUNTER);
+    }
+
+    if (strcmp(s->arg1, "lt") == 0) {
+        copy_D_register_value_to(file, TEMP_REGISTER);
+        pop_stack_value_to_D_register(file);
+        sub_D_register_value_with(file, TEMP_REGISTER);
+        fprintf(file, "\t@LT%d\n", ++CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\tD;JLT\n");
+        fprintf(file, "\tD=0\n");
+        push_D_register_value_to_stack(file);
+        fprintf(file, "\t@NEXT%d\n", CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\t0;JMP\n");
+        fprintf(file, "(LT%d)\n", CONDITION_STATEMENT_COUNTER);
+        fprintf(file, "\tD=-1\n");
+        push_D_register_value_to_stack(file);
+        fprintf(file, "(NEXT%d)\n", CONDITION_STATEMENT_COUNTER);
+    }
+ret:
+    return;
+}
+
+void code_writer(FILE *file, Statement *s, const char *vm_file_root)
+{
+    switch (s->cmd) {
+    case C_ARITHMETIC:
+        write_arithmetic(file, s);
         break;
     case C_PUSH:
         write_comment(file, s);

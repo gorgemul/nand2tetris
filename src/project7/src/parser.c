@@ -30,6 +30,7 @@ char *extract_line_content(const char *line)
 
     return buf;
 }
+
 char *extract_first_token(const char *content)
 {
     const char *from = content;
@@ -122,6 +123,8 @@ void parse_one_token_statement(Statement *s, const char *content, Command cmd)
     strcpy(s->arg1, content);
     s->arg2 = NO_ARG2;
 }
+
+// TODO: Hanlde two tokens statement
 
 void parse_three_tokens_statement(Statement *s, const char *content, Command cmd)
 {

@@ -14,7 +14,7 @@ TESTS=$(shell find ./test -name "*.c")
 
 INC_DIRS=-I$(TEST_LIB_ROOT) -Isrc
 
-TEST_SRC= $(SRC) $(TESTS) $(TEST_LIB)
+TEST_SRC=$(SRC) $(TESTS) $(TEST_LIB)
 
 TEST_EXE=bin/test.out
 

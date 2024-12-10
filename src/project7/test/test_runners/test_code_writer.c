@@ -4,6 +4,11 @@
 TEST_GROUP_RUNNER(code_writer)
 {
     RUN_TEST_CASE(code_writer, code_writer_ARITHMETIC_add_statement);
+    RUN_TEST_CASE(code_writer, code_writer_ARITHMETIC_sub_statement);
+    RUN_TEST_CASE(code_writer, code_writer_ARITHMETIC_neg_statement);
+    RUN_TEST_CASE(code_writer, code_writer_ARITHMETIC_eq_statement);
+    RUN_TEST_CASE(code_writer, code_writer_ARITHMETIC_gt_statement);
+    RUN_TEST_CASE(code_writer, code_writer_ARITHMETIC_lt_statement);
 
     RUN_TEST_CASE(code_writer, code_writer_MEMORY_ACCESS_push_offset_segment_statement);
     RUN_TEST_CASE(code_writer, code_writer_MEMORY_ACCESS_push_constant_statement);

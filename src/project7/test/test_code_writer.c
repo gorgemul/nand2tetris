@@ -128,6 +128,22 @@ void test_add_D_register_value_with(FILE *file, const char *src)
     TEST_ASSERT_EQUAL_STRING("\tD=D+M\n", line);
 }
 
+void test_sub_D_register_value_with(FILE *file, const char *src)
+{
+    char expected[LINE_MAX_LENGTH] = {0};
+
+    strcat(expected, "\t");
+    strcat(expected, "@");
+    strcat(expected, src);
+    strcat(expected, "\n\0");
+
+    fgets(line, LINE_MAX_LENGTH, file);
+    TEST_ASSERT_EQUAL_STRING(expected, line);
+
+    fgets(line, LINE_MAX_LENGTH, file);
+    TEST_ASSERT_EQUAL_STRING("\tD=D-M\n", line);
+}
+
 void test_push_D_register_value_to_stack(FILE *file)
 {
     fgets(line, LINE_MAX_LENGTH, file);
@@ -212,6 +228,201 @@ TEST(code_writer, code_writer_ARITHMETIC_add_statement)
     fclose(tmp_file);
 }
 
+TEST(code_writer, code_writer_ARITHMETIC_sub_statement)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "sub",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_copy_D_register_value_to(tmp_file, TEMP_REGISTER);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_sub_D_register_value_with(tmp_file, TEMP_REGISTER);
+    test_push_D_register_value_to_stack(tmp_file);
+    fclose(tmp_file);
+}
+
+TEST(code_writer, code_writer_ARITHMETIC_neg_statement)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "neg",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_pop_stack_value_to_D_register(tmp_file);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD=-D\n", line);
+
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fclose(tmp_file);
+}
+
+/*
+  The conditional counter is a global variable, test would affect code writer's counter state
+  So the next three tests' counter would be like 1 2 3
+*/
+TEST(code_writer, code_writer_ARITHMETIC_eq_statement)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "eq",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_copy_D_register_value_to(tmp_file, TEMP_REGISTER);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_sub_D_register_value_with(tmp_file, TEMP_REGISTER);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t@EQ1\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD;JEQ\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD=0\n", line);
+
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t@NEXT1\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t0;JMP\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("(EQ1)\n", line);
+
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD=-1\n", line);
+
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("(NEXT1)\n", line);
+
+    fclose(tmp_file);
+}
+
+TEST(code_writer, code_writer_ARITHMETIC_gt_statement)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "gt",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_copy_D_register_value_to(tmp_file, TEMP_REGISTER);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_sub_D_register_value_with(tmp_file, TEMP_REGISTER);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t@GT2\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD;JGT\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD=0\n", line);
+
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t@NEXT2\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t0;JMP\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("(GT2)\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD=-1\n", line);
+
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("(NEXT2)\n", line);
+
+    fclose(tmp_file);
+}
+
+TEST(code_writer, code_writer_ARITHMETIC_lt_statement)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "lt",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_copy_D_register_value_to(tmp_file, TEMP_REGISTER);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_sub_D_register_value_with(tmp_file, TEMP_REGISTER);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t@LT3\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD;JLT\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD=0\n", line);
+
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t@NEXT3\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\t0;JMP\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("(LT3)\n", line);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD=-1\n", line);
+
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("(NEXT3)\n", line);
+
+    fclose(tmp_file);
+}
 
 TEST(code_writer, code_writer_MEMORY_ACCESS_push_offset_segment_statement)
 {
