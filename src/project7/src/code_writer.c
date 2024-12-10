@@ -54,6 +54,18 @@ void sub_D_register_value_with(FILE *file, const char* src)
     fprintf(file, "\tD=D-M\n");
 }
 
+void and_D_register_value_with(FILE *file, const char* src)
+{
+    fprintf(file, "\t@%s\n", src);
+    fprintf(file, "\tD=D&M\n");
+}
+
+void or_D_register_value_with(FILE *file, const char* src)
+{
+    fprintf(file, "\t@%s\n", src);
+    fprintf(file, "\tD=D|M\n");
+}
+
 void push_D_register_value_to_stack(FILE *file)
 {
     fprintf(file, "\t@SP\n");
@@ -180,6 +192,27 @@ void write_arithmetic(FILE *file, Statement *s)
         push_D_register_value_to_stack(file);
         fprintf(file, "(NEXT%d)\n", CONDITION_STATEMENT_COUNTER);
     }
+
+    if (strcmp(s->arg1, "and") == 0) {
+        copy_D_register_value_to(file, TEMP_REGISTER);
+        pop_stack_value_to_D_register(file);
+        and_D_register_value_with(file, TEMP_REGISTER);
+        push_D_register_value_to_stack(file);
+    }
+
+    if (strcmp(s->arg1, "or") == 0) {
+        copy_D_register_value_to(file, TEMP_REGISTER);
+        pop_stack_value_to_D_register(file);
+        or_D_register_value_with(file, TEMP_REGISTER);
+        push_D_register_value_to_stack(file);
+    }
+
+    if (strcmp(s->arg1, "not") == 0) {
+        fprintf(file, "\tD=!D\n");
+        push_D_register_value_to_stack(file);
+        goto ret;
+    }
+
 ret:
     return;
 }

@@ -144,6 +144,38 @@ void test_sub_D_register_value_with(FILE *file, const char *src)
     TEST_ASSERT_EQUAL_STRING("\tD=D-M\n", line);
 }
 
+void test_and_D_register_value_with(FILE *file, const char *src)
+{
+    char expected[LINE_MAX_LENGTH] = {0};
+
+    strcat(expected, "\t");
+    strcat(expected, "@");
+    strcat(expected, src);
+    strcat(expected, "\n\0");
+
+    fgets(line, LINE_MAX_LENGTH, file);
+    TEST_ASSERT_EQUAL_STRING(expected, line);
+
+    fgets(line, LINE_MAX_LENGTH, file);
+    TEST_ASSERT_EQUAL_STRING("\tD=D&M\n", line);
+}
+
+void test_or_D_register_value_with(FILE *file, const char *src)
+{
+    char expected[LINE_MAX_LENGTH] = {0};
+
+    strcat(expected, "\t");
+    strcat(expected, "@");
+    strcat(expected, src);
+    strcat(expected, "\n\0");
+
+    fgets(line, LINE_MAX_LENGTH, file);
+    TEST_ASSERT_EQUAL_STRING(expected, line);
+
+    fgets(line, LINE_MAX_LENGTH, file);
+    TEST_ASSERT_EQUAL_STRING("\tD=D|M\n", line);
+}
+
 void test_push_D_register_value_to_stack(FILE *file)
 {
     fgets(line, LINE_MAX_LENGTH, file);
@@ -420,6 +452,73 @@ TEST(code_writer, code_writer_ARITHMETIC_lt_statement)
 
     fgets(line, LINE_MAX_LENGTH, tmp_file);
     TEST_ASSERT_EQUAL_STRING("(NEXT3)\n", line);
+
+    fclose(tmp_file);
+}
+
+TEST(code_writer, code_writer_ARITHMETIC_and_statement)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "and",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_copy_D_register_value_to(tmp_file, TEMP_REGISTER);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_and_D_register_value_with(tmp_file, TEMP_REGISTER);
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fclose(tmp_file);
+}
+
+TEST(code_writer, code_writer_ARITHMETIC_or_statement)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "or",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_copy_D_register_value_to(tmp_file, TEMP_REGISTER);
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_or_D_register_value_with(tmp_file, TEMP_REGISTER);
+    test_push_D_register_value_to_stack(tmp_file);
+
+    fclose(tmp_file);
+}
+
+TEST(code_writer, code_writer_ARITHMETIC_not_statement)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_ARITHMETIC,
+        .arg1 = "not",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_pop_stack_value_to_D_register(tmp_file);
+
+    fgets(line, LINE_MAX_LENGTH, tmp_file);
+    TEST_ASSERT_EQUAL_STRING("\tD=!D\n", line);
+
+    test_push_D_register_value_to_stack(tmp_file);
 
     fclose(tmp_file);
 }
