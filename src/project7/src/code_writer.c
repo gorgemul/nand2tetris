@@ -69,6 +69,7 @@ void or_D_register_value_with(FILE *file, const char* src)
 void push_D_register_value_to_stack(FILE *file)
 {
     fprintf(file, "\t@SP\n");
+    fprintf(file, "\tA=M\n");
     fprintf(file, "\tM=D\n");
 
     fprintf(file, "\t@SP\n");
@@ -120,7 +121,6 @@ void copy_segment_value_to_D_register(FILE *file, Statement *s, const char *vm_f
 
 void write_arithmetic(FILE *file, Statement *s)
 {
-    write_comment(file, s);
     pop_stack_value_to_D_register(file);
 
     if (strcmp(s->arg1, "add") == 0) {
@@ -128,7 +128,7 @@ void write_arithmetic(FILE *file, Statement *s)
         pop_stack_value_to_D_register(file);
         add_D_register_value_with(file, TEMP_REGISTER);
         push_D_register_value_to_stack(file);
-        goto ret;
+        return;
     }
 
     if (strcmp(s->arg1, "sub") == 0) {
@@ -136,13 +136,13 @@ void write_arithmetic(FILE *file, Statement *s)
         pop_stack_value_to_D_register(file);
         sub_D_register_value_with(file, TEMP_REGISTER);
         push_D_register_value_to_stack(file);
-        goto ret;
+        return;
     }
 
     if (strcmp(s->arg1, "neg") == 0) {
         fprintf(file, "\tD=-D\n");
         push_D_register_value_to_stack(file);
-        goto ret;
+        return;
     }
 
     if (strcmp(s->arg1, "eq") == 0) {
@@ -159,6 +159,7 @@ void write_arithmetic(FILE *file, Statement *s)
         fprintf(file, "\tD=-1\n");
         push_D_register_value_to_stack(file);
         fprintf(file, "(NEXT%d)\n", CONDITION_STATEMENT_COUNTER);
+        return;
     }
 
     if (strcmp(s->arg1, "gt") == 0) {
@@ -175,6 +176,7 @@ void write_arithmetic(FILE *file, Statement *s)
         fprintf(file, "\tD=-1\n");
         push_D_register_value_to_stack(file);
         fprintf(file, "(NEXT%d)\n", CONDITION_STATEMENT_COUNTER);
+        return;
     }
 
     if (strcmp(s->arg1, "lt") == 0) {
@@ -191,6 +193,7 @@ void write_arithmetic(FILE *file, Statement *s)
         fprintf(file, "\tD=-1\n");
         push_D_register_value_to_stack(file);
         fprintf(file, "(NEXT%d)\n", CONDITION_STATEMENT_COUNTER);
+        return;
     }
 
     if (strcmp(s->arg1, "and") == 0) {
@@ -198,6 +201,7 @@ void write_arithmetic(FILE *file, Statement *s)
         pop_stack_value_to_D_register(file);
         and_D_register_value_with(file, TEMP_REGISTER);
         push_D_register_value_to_stack(file);
+        return;
     }
 
     if (strcmp(s->arg1, "or") == 0) {
@@ -205,28 +209,76 @@ void write_arithmetic(FILE *file, Statement *s)
         pop_stack_value_to_D_register(file);
         or_D_register_value_with(file, TEMP_REGISTER);
         push_D_register_value_to_stack(file);
+        return;
     }
 
     if (strcmp(s->arg1, "not") == 0) {
         fprintf(file, "\tD=!D\n");
         push_D_register_value_to_stack(file);
-        goto ret;
+        return;
+    }
+}
+
+void write_pop(FILE *file, Statement *s, const char *vm_file_root)
+{
+    if (strcmp(s->arg1, "static") == 0) {
+        pop_stack_value_to_D_register(file);
+        fprintf(file, "\t@%s.%d\n", vm_file_root, s->arg2);
+        fprintf(file, "\tM=D\n");
+        return;
     }
 
-ret:
-    return;
+    if (strcmp(s->arg1, "pointer") == 0) {
+        pop_stack_value_to_D_register(file);
+        fprintf(file, "\t@%s\n", s->arg2 == 0 ? "THIS" : "THAT");
+        fprintf(file, "\tM=D\n");
+        return;
+    }
+
+    if (strcmp(s->arg1, "temp") == 0) {
+        pop_stack_value_to_D_register(file);
+        fprintf(file, "\t@R%d\n", (5 + s->arg2));
+        fprintf(file, "\tM=D\n");
+        return;
+    }
+
+    if (strcmp(s->arg1, "local") == 0) {
+        fprintf(file, "\t@LCL\n");
+    } else if (strcmp(s->arg1, "argument") == 0) {
+        fprintf(file, "\t@ARG\n");
+    } else if (strcmp(s->arg1, "this") == 0) {
+        fprintf(file, "\t@THIS\n");
+    } else if (strcmp(s->arg1, "that") == 0) {
+        fprintf(file, "\t@THAT\n");
+    }
+
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@%d\n", s->arg2);
+    fprintf(file, "\tD=D+A\n");
+    fprintf(file, "\t@%s\n", TEMP_REGISTER);
+    fprintf(file, "\tM=D\n");
+    pop_stack_value_to_D_register(file);
+    fprintf(file, "\t@%s\n", TEMP_REGISTER);
+    fprintf(file, "\tA=M\n");
+    fprintf(file, "\tM=D\n");
 }
+
 
 void code_writer(FILE *file, Statement *s, const char *vm_file_root)
 {
     switch (s->cmd) {
     case C_ARITHMETIC:
+        write_comment(file, s);
         write_arithmetic(file, s);
         break;
     case C_PUSH:
         write_comment(file, s);
         copy_segment_value_to_D_register(file, s, vm_file_root);
         push_D_register_value_to_stack(file);
+        break;
+    case C_POP:
+        write_comment(file, s);
+        write_pop(file, s, vm_file_root);
         break;
     default:
         break;
