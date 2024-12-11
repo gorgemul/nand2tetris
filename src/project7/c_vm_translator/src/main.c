@@ -61,6 +61,8 @@ int main(int argc, char *argv[])
         code_writer(dst, s, vm_file_root);
     }
 
+    // TODO: should add a infinite loop!
+
     printf("======> Success translate %s\n", src_path);
     printf("======> Generating %s\n", dst_path);
 
