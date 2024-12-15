@@ -18,6 +18,15 @@ void write_comment(FILE *file, Statement *s)
     case C_POP:
         fprintf(file, "pop %s %d\n", s->arg1, s->arg2);
         break;
+    case C_LABEL:
+        fprintf(file, "label %s\n", s->arg1);
+        break;
+    case C_GOTO:
+        fprintf(file, "goto %s\n", s->arg1);
+        break;
+    case C_IF:
+        fprintf(file, "if-goto %s\n", s->arg1);
+        break;
     case C_FUNCTION:
         fprintf(file, "function %s %d\n", s->arg1, s->arg2);
         break;
@@ -279,6 +288,21 @@ void code_writer(FILE *file, Statement *s, const char *vm_file_root)
     case C_POP:
         write_comment(file, s);
         write_pop(file, s, vm_file_root);
+        break;
+    case C_LABEL:
+        write_comment(file, s);
+        fprintf(file, "(%s_%s)\n", vm_file_root, s->arg1);
+        break;
+    case C_GOTO:
+        write_comment(file, s);
+        fprintf(file, "\t@%s_%s\n", vm_file_root, s->arg1);
+        fprintf(file, "\t0;JMP\n");
+        break;
+    case C_IF:
+        write_comment(file, s);
+        pop_stack_value_to_D_register(file);
+        fprintf(file, "\t@%s_%s\n", vm_file_root, s->arg1);
+        fprintf(file, "\tD;JGT\n");
         break;
     default:
         break;

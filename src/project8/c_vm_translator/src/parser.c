@@ -130,13 +130,9 @@ void parse_two_tokens_statement(Statement *s, const char *content, Command cmd)
     char *to = strchr(from, '\0');
     int length = to - from;
 
-    char *buf = malloc(sizeof(*buf) * length+3); // "()\0"
-
-    if (cmd == C_LABEL) strcat(buf, "(");
+    char *buf = malloc(sizeof(*buf) * length+1);
 
     strcat(buf, from);
-
-    if (cmd == C_LABEL) strcat(buf, ")\0");
 
     s->cmd = cmd;
     strcpy(s->arg1, buf);
