@@ -124,7 +124,26 @@ void parse_one_token_statement(Statement *s, const char *content, Command cmd)
     s->arg2 = NO_ARG2;
 }
 
-// TODO: Hanlde two tokens statement
+void parse_two_tokens_statement(Statement *s, const char *content, Command cmd)
+{
+    char *from = strchr(content, ' ') + 1;
+    char *to = strchr(from, '\0');
+    int length = to - from;
+
+    char *buf = malloc(sizeof(*buf) * length+3); // "()\0"
+
+    if (cmd == C_LABEL) strcat(buf, "(");
+
+    strcat(buf, from);
+
+    if (cmd == C_LABEL) strcat(buf, ")\0");
+
+    s->cmd = cmd;
+    strcpy(s->arg1, buf);
+    s->arg2 = NO_ARG2;
+
+    free(buf);
+}
 
 void parse_three_tokens_statement(Statement *s, const char *content, Command cmd)
 {
@@ -188,6 +207,15 @@ Statement *parser(const char *line)
         break;
     case C_RETURN:
         parse_one_token_statement(s, content, C_RETURN);
+        break;
+    case C_LABEL:
+        parse_two_tokens_statement(s, content, C_LABEL);
+        break;
+    case C_GOTO:
+        parse_two_tokens_statement(s, content, C_GOTO);
+        break;
+    case C_IF:
+        parse_two_tokens_statement(s, content, C_IF);
         break;
     default:
         break;

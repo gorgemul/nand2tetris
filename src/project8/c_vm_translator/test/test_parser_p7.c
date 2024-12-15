@@ -6,74 +6,74 @@
 
 /** The reason that all the line in test contain '\n' is in main use fgets, it will extract every line in file that ends with '\n' */
 
-TEST_SETUP(parser)
+TEST_SETUP(parser_p7)
 {
 
 }
 
-TEST_TEAR_DOWN(parser)
+TEST_TEAR_DOWN(parser_p7)
 {
 }
 
-TEST_GROUP(parser);
+TEST_GROUP(parser_p7);
 
-TEST(parser, parser_comment_return_null_statement_no_whitespaces)
+TEST(parser_p7, parser_comment_return_null_statement_no_whitespaces)
 {
     const char *line = "// This is a comment\n";
     Statement *s = parser(line);
     TEST_ASSERT_NULL(s);
 }
 
-TEST(parser, parser_comment_return_null_statement_preceiding_whitespaces)
+TEST(parser_p7, parser_comment_return_null_statement_preceiding_whitespaces)
 {
     const char *line = "    // This is a comment\n";
     Statement *s = parser(line);
     TEST_ASSERT_NULL(s);
 }
 
-TEST(parser, parser_comment_return_null_statement_trailing_whitespaces)
+TEST(parser_p7, parser_comment_return_null_statement_trailing_whitespaces)
 {
     const char *line = "// This is a comment   \n";
     Statement *s = parser(line);
     TEST_ASSERT_NULL(s);
 }
 
-TEST(parser, parser_comment_return_null_statement_preceiding_trailing_whitespaces)
+TEST(parser_p7, parser_comment_return_null_statement_preceiding_trailing_whitespaces)
 {
     const char *line = "  // This is a comment   \n";
     Statement *s = parser(line);
     TEST_ASSERT_NULL(s);
 }
 
-TEST(parser, parser_empty_line_return_null_statement)
+TEST(parser_p7, parser_empty_line_return_null_statement)
 {
     const char *line = "\n";
     Statement *s = parser(line);
     TEST_ASSERT_NULL(s);
 }
 
-TEST(parser, parser_empty_line_return_null_statement_with_space)
+TEST(parser_p7, parser_empty_line_return_null_statement_with_space)
 {
     const char *line = " \n";
     Statement *s = parser(line);
     TEST_ASSERT_NULL(s);
 }
 
-TEST(parser, parser_empty_line_return_null_statement_with_tab)
+TEST(parser_p7, parser_empty_line_return_null_statement_with_tab)
 {
     const char *line = "\t\n";
     Statement *s = parser(line);
     TEST_ASSERT_NULL(s);
 }
 
-TEST(parser, parser_empty_line_return_null_statement_with_space_and_tab)
+TEST(parser_p7, parser_empty_line_return_null_statement_with_space_and_tab)
 {
     const char *line = " \t\n";
     Statement *s = parser(line);
     TEST_ASSERT_NULL(s);
 }
 
-TEST(parser, parser_arithmetic_statement)
+TEST(parser_p7, parser_arithmetic_statement)
 {
     const char *line = "add\n";
     Statement *s = parser(line);
@@ -85,7 +85,7 @@ TEST(parser, parser_arithmetic_statement)
     free(s);
 }
 
-TEST(parser, parser_arithmetic_statement_with_preceiding_whitespaces)
+TEST(parser_p7, parser_arithmetic_statement_with_preceiding_whitespaces)
 {
     const char *line = "  gt\n";
     Statement *s = parser(line);
@@ -97,7 +97,7 @@ TEST(parser, parser_arithmetic_statement_with_preceiding_whitespaces)
     free(s);
 }
 
-TEST(parser, parser_arithmetic_statement_with_trailing_whitespaces)
+TEST(parser_p7, parser_arithmetic_statement_with_trailing_whitespaces)
 {
     const char *line = "sub      \n";
     Statement *s = parser(line);
@@ -109,7 +109,7 @@ TEST(parser, parser_arithmetic_statement_with_trailing_whitespaces)
     free(s);
 }
 
-TEST(parser, parser_arithmetic_statement_with_trailing_with_comment)
+TEST(parser_p7, parser_arithmetic_statement_with_trailing_with_comment)
 {
     const char *line = "sub //some comment \n";
     Statement *s = parser(line);
@@ -121,7 +121,7 @@ TEST(parser, parser_arithmetic_statement_with_trailing_with_comment)
     free(s);
 }
 
-TEST(parser, parser_push_statement)
+TEST(parser_p7, parser_push_statement)
 {
     const char *line = "push local 0\n";
     Statement *s = parser(line);
@@ -133,7 +133,7 @@ TEST(parser, parser_push_statement)
     free(s);
 }
 
-TEST(parser, parser_pop_statement)
+TEST(parser_p7, parser_pop_statement)
 {
     const char *line = "pop argument 3000\n";
     Statement *s = parser(line);
@@ -145,7 +145,7 @@ TEST(parser, parser_pop_statement)
     free(s);
 }
 
-TEST(parser, parser_function_statement)
+TEST(parser_p7, parser_function_statement)
 {
     const char *line = "function do_something 3\n";
     Statement *s = parser(line);
@@ -157,7 +157,7 @@ TEST(parser, parser_function_statement)
     free(s);
 }
 
-TEST(parser, parser_call_statement)
+TEST(parser_p7, parser_call_statement)
 {
     const char *line = "call do_something 3\n";
     Statement *s = parser(line);
@@ -169,7 +169,7 @@ TEST(parser, parser_call_statement)
     free(s);
 }
 
-TEST(parser, parser_return_statement)
+TEST(parser_p7, parser_return_statement)
 {
     const char *line = "return\n";
     Statement *s = parser(line);

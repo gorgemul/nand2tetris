@@ -7,12 +7,12 @@
 
 #define LINE_MAX_LENGTH 256
 
-TEST_SETUP(code_writer)
+TEST_SETUP(code_writer_p7)
 {
 
 }
 
-TEST_TEAR_DOWN(code_writer)
+TEST_TEAR_DOWN(code_writer_p7)
 {
 }
 
@@ -274,9 +274,9 @@ void test_copy_D_register_value_to_offset_segment(FILE *file, Statement *s)
     TEST_ASSERT_EQUAL_STRING(expected, line);
 }
 
-TEST_GROUP(code_writer);
+TEST_GROUP(code_writer_p7);
 
-TEST(code_writer, code_writer_ARITHMETIC_add_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_add_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -298,7 +298,7 @@ TEST(code_writer, code_writer_ARITHMETIC_add_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_ARITHMETIC_sub_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_sub_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -319,7 +319,7 @@ TEST(code_writer, code_writer_ARITHMETIC_sub_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_ARITHMETIC_neg_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_neg_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -346,7 +346,7 @@ TEST(code_writer, code_writer_ARITHMETIC_neg_statement)
   The conditional counter is a global variable, test would affect code writer's counter state
   So the next three tests' counter would be like 1 2 3
 */
-TEST(code_writer, code_writer_ARITHMETIC_eq_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_eq_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -396,7 +396,7 @@ TEST(code_writer, code_writer_ARITHMETIC_eq_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_ARITHMETIC_gt_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_gt_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -445,7 +445,7 @@ TEST(code_writer, code_writer_ARITHMETIC_gt_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_ARITHMETIC_lt_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_lt_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -494,7 +494,7 @@ TEST(code_writer, code_writer_ARITHMETIC_lt_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_ARITHMETIC_and_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_and_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -516,7 +516,7 @@ TEST(code_writer, code_writer_ARITHMETIC_and_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_ARITHMETIC_or_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_or_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -538,7 +538,7 @@ TEST(code_writer, code_writer_ARITHMETIC_or_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_ARITHMETIC_not_statement)
+TEST(code_writer_p7, code_writer_ARITHMETIC_not_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -561,7 +561,7 @@ TEST(code_writer, code_writer_ARITHMETIC_not_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_push_offset_segment_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_push_offset_segment_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -580,7 +580,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_push_offset_segment_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_push_constant_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_push_constant_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -605,7 +605,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_push_constant_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_push_pointer_0_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_push_pointer_0_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -630,7 +630,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_push_pointer_0_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_push_pointer_1_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_push_pointer_1_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -655,7 +655,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_push_pointer_1_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_push_static_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_push_static_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -681,7 +681,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_push_static_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_push_temp_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_push_temp_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -706,7 +706,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_push_temp_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_pop_offset_segment_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_pop_offset_segment_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -747,7 +747,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_pop_offset_segment_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_pop_static_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_pop_static_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -772,7 +772,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_pop_static_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_pop_pointer_0_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_pop_pointer_0_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -796,7 +796,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_pop_pointer_0_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_pop_pointer_1_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_pop_pointer_1_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
@@ -820,7 +820,7 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_pop_pointer_1_statement)
     fclose(tmp_file);
 }
 
-TEST(code_writer, code_writer_MEMORY_ACCESS_pop_temp_statement)
+TEST(code_writer_p7, code_writer_MEMORY_ACCESS_pop_temp_statement)
 {
     FILE *tmp_file = tmpfile();
     Statement s = {
