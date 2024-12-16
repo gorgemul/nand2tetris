@@ -272,6 +272,87 @@ void write_pop(FILE *file, Statement *s, const char *vm_file_root)
     fprintf(file, "\tM=D\n");
 }
 
+void write_function(FILE *file, Statement *s)
+{
+    fprintf(file, "(%s)\n", s->arg1);
+
+    for (int i = 0; i < s->arg2; ++i) {
+        fprintf(file, "\t@%d\n", i);
+        fprintf(file, "\tD=A\n");
+        fprintf(file, "\t@LCL\n");
+        fprintf(file, "\tA=D+M\n");
+        fprintf(file, "\tM=0\n");
+    }
+}
+
+void write_return(FILE *file)
+{
+    // Save LCL to R13(endframe)
+    fprintf(file, "\t@LCL\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@R13\n");
+    fprintf(file, "\tM=D\n");
+
+    // Save *retaddr to R14
+    fprintf(file, "\t@5\n");
+    fprintf(file, "\tA=D-A\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@R14\n");
+    fprintf(file, "\tM=D\n");
+
+    // Pop stack value to *arg[0]
+    pop_stack_value_to_D_register(file);
+    fprintf(file, "\t@ARG\n");
+    fprintf(file, "\tA=M\n");
+    fprintf(file, "\tM=D\n");
+
+    // Reposition SP of the caller
+    fprintf(file, "\t@ARG\n");
+    fprintf(file, "\tD=M+1\n");
+    fprintf(file, "\t@SP\n");
+    fprintf(file, "\tM=D\n");
+
+    // Restore memory segments
+    // THAT
+    fprintf(file, "\t@R13\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@1\n");
+    fprintf(file, "\tA=D-A\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@THAT\n");
+    fprintf(file, "\tM=D\n");
+
+    // THIS
+    fprintf(file, "\t@R13\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@2\n");
+    fprintf(file, "\tA=D-A\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@THIS\n");
+    fprintf(file, "\tM=D\n");
+
+    // ARG
+    fprintf(file, "\t@R13\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@3\n");
+    fprintf(file, "\tA=D-A\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@ARG\n");
+    fprintf(file, "\tM=D\n");
+
+    // LCL
+    fprintf(file, "\t@R13\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@4\n");
+    fprintf(file, "\tA=D-A\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@LCL\n");
+    fprintf(file, "\tM=D\n");
+
+    fprintf(file, "\t@R14\n");
+    fprintf(file, "\tA=M\n");
+    fprintf(file, "\t0;JMP\n");
+}
 
 void code_writer(FILE *file, Statement *s, const char *vm_file_root)
 {
@@ -303,6 +384,14 @@ void code_writer(FILE *file, Statement *s, const char *vm_file_root)
         pop_stack_value_to_D_register(file);
         fprintf(file, "\t@%s_%s\n", vm_file_root, s->arg1);
         fprintf(file, "\tD;JGT\n");
+        break;
+    case C_FUNCTION:
+        write_comment(file, s);
+        write_function(file, s);
+        break;
+    case C_RETURN:
+        write_comment(file, s);
+        write_return(file);
         break;
     default:
         break;

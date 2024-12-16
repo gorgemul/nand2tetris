@@ -29,4 +29,7 @@ TEST_GROUP_RUNNER(code_writer)
     RUN_TEST_CASE(code_writer, code_writer_MEMORY_ACCESS_pop_pointer_0_statement);
     RUN_TEST_CASE(code_writer, code_writer_MEMORY_ACCESS_pop_pointer_1_statement);
     RUN_TEST_CASE(code_writer, code_writer_MEMORY_ACCESS_pop_temp_statement);
+
+    RUN_TEST_CASE(code_writer, code_writer_FUNCTION_definition);
+    RUN_TEST_CASE(code_writer, code_writer_FUNCTION_return);
 }

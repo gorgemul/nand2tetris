@@ -780,3 +780,122 @@ TEST(code_writer, code_writer_MEMORY_ACCESS_pop_temp_statement)
 
     fclose(tmp_file);
 }
+
+TEST(code_writer, code_writer_FUNCTION_definition)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_FUNCTION,
+        .arg1 = "do_something",
+        .arg2 = 3,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    test_current_line_equal(tmp_file, "(do_something)\n");
+
+    test_current_line_equal(tmp_file, "\t@0\n");
+    test_current_line_equal(tmp_file, "\tD=A\n");
+    test_current_line_equal(tmp_file, "\t@LCL\n");
+    test_current_line_equal(tmp_file, "\tA=D+M\n");
+    test_current_line_equal(tmp_file, "\tM=0\n");
+
+    test_current_line_equal(tmp_file, "\t@1\n");
+    test_current_line_equal(tmp_file, "\tD=A\n");
+    test_current_line_equal(tmp_file, "\t@LCL\n");
+    test_current_line_equal(tmp_file, "\tA=D+M\n");
+    test_current_line_equal(tmp_file, "\tM=0\n");
+
+    test_current_line_equal(tmp_file, "\t@2\n");
+    test_current_line_equal(tmp_file, "\tD=A\n");
+    test_current_line_equal(tmp_file, "\t@LCL\n");
+    test_current_line_equal(tmp_file, "\tA=D+M\n");
+    test_current_line_equal(tmp_file, "\tM=0\n");
+
+    fclose(tmp_file);
+}
+
+TEST(code_writer, code_writer_FUNCTION_return)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_RETURN,
+        .arg1 = "return",
+        .arg2 = NO_ARG2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    // Save LCL addr to @R13(endframe)
+    test_current_line_equal(tmp_file, "\t@LCL\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@R13\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // Save the *retaddr to @R14
+    test_current_line_equal(tmp_file, "\t@5\n");
+    test_current_line_equal(tmp_file, "\tA=D-A\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@R14\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // pop callee working stack to *arg[0]
+    test_pop_stack_value_to_D_register(tmp_file);
+    test_current_line_equal(tmp_file, "\t@ARG\n");
+    test_current_line_equal(tmp_file, "\tA=M\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // Reposition SP of the caller
+    test_current_line_equal(tmp_file, "\t@ARG\n");
+    test_current_line_equal(tmp_file, "\tD=M+1\n");
+    test_current_line_equal(tmp_file, "\t@SP\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // Restore THAT, THIS, ARG, LCL
+    // Restore THAT
+    test_current_line_equal(tmp_file, "\t@R13\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@1\n");
+    test_current_line_equal(tmp_file, "\tA=D-A\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@THAT\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // Restore THIS
+    test_current_line_equal(tmp_file, "\t@R13\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@2\n");
+    test_current_line_equal(tmp_file, "\tA=D-A\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@THIS\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // Restore ARG
+    test_current_line_equal(tmp_file, "\t@R13\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@3\n");
+    test_current_line_equal(tmp_file, "\tA=D-A\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@ARG\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // Restore LCL
+    test_current_line_equal(tmp_file, "\t@R13\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@4\n");
+    test_current_line_equal(tmp_file, "\tA=D-A\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@LCL\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // Goto retAddr
+    test_current_line_equal(tmp_file, "\t@R14\n");
+    test_current_line_equal(tmp_file, "\tA=M\n");
+    test_current_line_equal(tmp_file, "\t0;JMP\n");
+
+    fclose(tmp_file);
+}
