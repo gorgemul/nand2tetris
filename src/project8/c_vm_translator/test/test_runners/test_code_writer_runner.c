@@ -32,4 +32,5 @@ TEST_GROUP_RUNNER(code_writer)
 
     RUN_TEST_CASE(code_writer, code_writer_FUNCTION_definition);
     RUN_TEST_CASE(code_writer, code_writer_FUNCTION_return);
+    RUN_TEST_CASE(code_writer, code_writer_FUNCTION_call);
 }

@@ -549,7 +549,7 @@ TEST(code_writer, code_writer_BRANCHING_if_goto_statement)
     test_write_comment(tmp_file, &s);
     test_pop_stack_value_to_D_register(tmp_file);
     test_current_line_equal(tmp_file, "\t@Foo_LOOP\n");
-    test_current_line_equal(tmp_file, "\tD;JGT\n");
+    test_current_line_equal(tmp_file, "\tD;JNE\n");
 
     fclose(tmp_file);
 }
@@ -896,6 +896,70 @@ TEST(code_writer, code_writer_FUNCTION_return)
     test_current_line_equal(tmp_file, "\t@R14\n");
     test_current_line_equal(tmp_file, "\tA=M\n");
     test_current_line_equal(tmp_file, "\t0;JMP\n");
+
+    fclose(tmp_file);
+}
+
+TEST(code_writer, code_writer_FUNCTION_call)
+{
+    FILE *tmp_file = tmpfile();
+    Statement s = {
+        .cmd = C_CALL,
+        .arg1 = "do_something",
+        .arg2 = 2,
+    };
+
+    code_writer(tmp_file, &s, NULL);
+    rewind(tmp_file);
+
+    test_write_comment(tmp_file, &s);
+    // Push retAddr
+    test_current_line_equal(tmp_file, "\t@do_something$ret1\n");
+    test_current_line_equal(tmp_file, "\tD=A\n");
+    test_push_D_register_value_to_stack(tmp_file);
+
+    // Push LCL
+    test_current_line_equal(tmp_file, "\t@LCL\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_push_D_register_value_to_stack(tmp_file);
+
+    // Push ARG
+    test_current_line_equal(tmp_file, "\t@ARG\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_push_D_register_value_to_stack(tmp_file);
+
+    // Push THIS
+    test_current_line_equal(tmp_file, "\t@THIS\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_push_D_register_value_to_stack(tmp_file);
+
+    // Push THAT
+    test_current_line_equal(tmp_file, "\t@THAT\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_push_D_register_value_to_stack(tmp_file);
+
+    // Repositions ARG
+    test_current_line_equal(tmp_file, "\t@SP\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@5\n");
+    test_current_line_equal(tmp_file, "\tD=D-A\n");
+    test_current_line_equal(tmp_file, "\t@2\n"); // args number
+    test_current_line_equal(tmp_file, "\tD=D-A\n");
+    test_current_line_equal(tmp_file, "\t@ARG\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // Repositions LCL
+    test_current_line_equal(tmp_file, "\t@SP\n");
+    test_current_line_equal(tmp_file, "\tD=M\n");
+    test_current_line_equal(tmp_file, "\t@LCL\n");
+    test_current_line_equal(tmp_file, "\tM=D\n");
+
+    // goto function name
+    test_current_line_equal(tmp_file, "\t@do_something\n");
+    test_current_line_equal(tmp_file, "\t0;JMP\n");
+
+    // Declare label for retaddr
+    test_current_line_equal(tmp_file, "(do_something$ret1)\n");
 
     fclose(tmp_file);
 }

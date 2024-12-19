@@ -2,6 +2,7 @@
 #include <string.h>
 
 int CONDITION_STATEMENT_COUNTER = 0;
+int CALL_FUNCTION_RETURN_COUNTER = 0;
 
 void write_comment(FILE *file, Statement *s)
 {
@@ -354,6 +355,57 @@ void write_return(FILE *file)
     fprintf(file, "\t0;JMP\n");
 }
 
+void write_call(FILE *file, Statement *s)
+{
+    // push retaddr
+    fprintf(file, "\t@%s$ret%d\n", s->arg1, ++CALL_FUNCTION_RETURN_COUNTER);
+    fprintf(file, "\tD=A\n");
+    push_D_register_value_to_stack(file);
+
+    // push LCL
+    fprintf(file, "\t@LCL\n");
+    fprintf(file, "\tD=M\n");
+    push_D_register_value_to_stack(file);
+
+    // push ARG
+    fprintf(file, "\t@ARG\n");
+    fprintf(file, "\tD=M\n");
+    push_D_register_value_to_stack(file);
+
+    // push THIS
+    fprintf(file, "\t@THIS\n");
+    fprintf(file, "\tD=M\n");
+    push_D_register_value_to_stack(file);
+
+    // push THAT
+    fprintf(file, "\t@THAT\n");
+    fprintf(file, "\tD=M\n");
+    push_D_register_value_to_stack(file);
+
+    // repositions ARG
+    fprintf(file, "\t@SP\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@5\n");
+    fprintf(file, "\tD=D-A\n");
+    fprintf(file, "\t@%d\n", s->arg2);
+    fprintf(file, "\tD=D-A\n");
+    fprintf(file, "\t@ARG\n");
+    fprintf(file, "\tM=D\n");
+
+    // repositions LCL
+    fprintf(file, "\t@SP\n");
+    fprintf(file, "\tD=M\n");
+    fprintf(file, "\t@LCL\n");
+    fprintf(file, "\tM=D\n");
+
+    // goto functionName
+    fprintf(file, "\t@%s\n", s->arg1);
+    fprintf(file, "\t0;JMP\n");
+
+    // declare a label for retaddr
+    fprintf(file, "(%s$ret%d)\n", s->arg1, CALL_FUNCTION_RETURN_COUNTER);
+}
+
 void code_writer(FILE *file, Statement *s, const char *vm_file_root)
 {
     switch (s->cmd) {
@@ -383,7 +435,7 @@ void code_writer(FILE *file, Statement *s, const char *vm_file_root)
         write_comment(file, s);
         pop_stack_value_to_D_register(file);
         fprintf(file, "\t@%s_%s\n", vm_file_root, s->arg1);
-        fprintf(file, "\tD;JGT\n");
+        fprintf(file, "\tD;JNE\n");
         break;
     case C_FUNCTION:
         write_comment(file, s);
@@ -393,6 +445,9 @@ void code_writer(FILE *file, Statement *s, const char *vm_file_root)
         write_comment(file, s);
         write_return(file);
         break;
+    case C_CALL:
+        write_comment(file, s);
+        write_call(file, s);
     default:
         break;
     }

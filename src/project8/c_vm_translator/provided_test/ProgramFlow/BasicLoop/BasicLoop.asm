@@ -136,7 +136,7 @@
 	AM=M-1
 	D=M
 	@BasicLoop_LOOP
-	D;JGT
+	D;JNE
 // push local 0
 	@LCL
 	D=M

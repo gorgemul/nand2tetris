@@ -123,7 +123,7 @@
 	AM=M-1
 	D=M
 	@FibonacciSeries_COMPUTE_ELEMENT
-	D;JGT
+	D;JNE
 // goto END
 	@FibonacciSeries_END
 	0;JMP
