@@ -75,12 +75,11 @@ int is_symbol(char c)
     }
 }
 
-int is_string_const(char *word)
+int is_string_const(FILE *stream)
 {
-    int word_len = strlen(word);
-    char f_char = word[0];
-    char l_char = word[word_len-1];
-    return f_char == '"' && l_char == '"';
+    char c = fgetc(stream);
+    ungetc(c, stream);
+    return c == '"';
 }
 
 int is_int_const(char *word)
@@ -121,17 +120,35 @@ char *get_word(FILE *stream)
     return buf;
 }
 
+/** string const may include multiple words */
+void extract_token_from_string_const(FILE *stream, Token *token)
+{
+    char line[LINE_MAX_LENGTH] = {0};
+    char *buf = malloc(sizeof(*buf) * TOKEN_MAX_LENGTH);
+    char *quote_start = NULL;
+    char *quote_end = NULL;
+    int str_len = 0;
+
+    fgets(line, sizeof(line), stream);
+
+    quote_start = line;
+    quote_end = strchr(quote_start+1, '"');
+    str_len = quote_end - (quote_start + 1);
+    memcpy(buf, quote_start+1, str_len);
+    buf[str_len] = '\0';
+
+    token->type = STRING_CONST;
+    strcpy(token->value, buf);
+
+    free(buf);
+}
+
 void extract_token_from_word(Token *token, char *word)
 {
     if (is_keyword(word)) {
         token->type = KEYWORD;
     } else if (is_int_const(word)) {
         token->type = INT_CONST;
-    } else if (is_string_const(word)) {
-        int no_quote_len = strlen(word) - 2;
-        memcpy(word, word+1, no_quote_len);
-        word[no_quote_len] = '\0';
-        token->type = STRING_CONST;
     } else {
         token->type = IDENTIFIER;
     }
@@ -145,10 +162,12 @@ int has_more_token(FILE *stream)
 
     while (!feof(stream)) {
         c = fgetc(stream);
+        char c_next = fgetc(stream); // Peek next char for making sure that is a comment
+        ungetc(c_next, stream);
 
         int is_whitespaces = c == ' ' || c == '\t';
         int is_empty_line = c == '\n';
-        int is_comment_begin = c == '/';
+        int is_comment_begin = (c == '/') && (c_next == '/' || c_next == '*');
 
         if (is_whitespaces || is_empty_line) continue;
 
@@ -167,8 +186,14 @@ int has_more_token(FILE *stream)
 void getToken(FILE *stream, Token *token)
 {
     long og_pos = ftell(stream);
-    char *word = get_word(stream);
 
+    if (is_string_const(stream)) {
+        extract_token_from_string_const(stream, token);
+        fseek(stream, og_pos + strlen(token->value) + 2, SEEK_SET); // +2 for skip " and "
+        return;
+    }
+
+    char *word = get_word(stream);
     int symbol_i = get_first_symbol_index(word);
 
     switch (symbol_i) {

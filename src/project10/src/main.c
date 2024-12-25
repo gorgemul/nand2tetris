@@ -2,11 +2,12 @@
 #include "tokenizer.h"
 #include "compile_engine.h"
 #include <stdio.h>
+#include <string.h>
 
 int main(void)
 {
-    FILE *i_stream = fopen("../provided_test/ExpressionLessSquare/SquareGame.jack", "r");
-    FILE *o_stream = fopen("../provided_test/ExpressionLessSquare/TSquareGame.xml", "w");
+    FILE *i_stream = fopen("../provided_test/Square/SquareGame.jack", "r");
+    FILE *o_stream = fopen("../provided_test/Square/TSquareGame.xml", "w");
     Token token = {0};
 
     fprintf(o_stream, "<tokens>\n");
@@ -16,5 +17,5 @@ int main(void)
         compile_term(o_stream, &token);
     }
 
-    fprintf(o_stream, "</tokens>");
+    fprintf(o_stream, "</tokens>\n");
 }

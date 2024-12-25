@@ -8,3 +8,4 @@ SRC="main.c tokenizer.c compile_engine.c"
 EXE="out"
 
 $CC $CFLAGS -o $EXE $SRC
+./$EXE
