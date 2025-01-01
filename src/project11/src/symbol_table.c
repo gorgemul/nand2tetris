@@ -83,6 +83,7 @@ SymbolTable *init_symbol_table(FILE *file)
 
 void destruct_subroutine_vars(SymbolTable *st)
 {
+    if (st->subroutine_var_count == 0) return;
     for (int i = 0; i < st->subroutine_var_count; i++) free(st->subroutine_vars[i]);
     free(st->subroutine_vars);
 
@@ -91,9 +92,10 @@ void destruct_subroutine_vars(SymbolTable *st)
 
 void destruct_symbol_table(SymbolTable *st)
 {
-    for (int i = 0; i < st->class_var_count; i++) free(st->class_vars[i]);
-
-    free(st->class_vars);
+    if (st->class_var_count > 0) {
+        for (int i = 0; i < st->class_var_count; i++) free(st->class_vars[i]);
+        free(st->class_vars);
+    }
     free(st);
 }
 
@@ -112,7 +114,7 @@ void add_var(SymbolTable *st, char *name, char *type, VarKind kind)
 append_class_var:
         newAddr = ((++st->class_var_count) == 1)
             ? malloc(sizeof(char**) * st->class_var_count)
-            : realloc(st->class_vars, st->class_var_count);
+            : realloc(st->class_vars, sizeof(char**) * st->class_var_count);
         st->class_vars = newAddr;
 
         buf[1] = '\0';
@@ -131,8 +133,8 @@ append_class_var:
         buf[0] = 'V';
 append_subroutine_var:
         newAddr = ((++st->subroutine_var_count) == 1)
-            ? malloc(sizeof(char*) * st->subroutine_var_count)
-            : realloc(st->subroutine_vars, st->subroutine_var_count);
+            ? malloc(sizeof(char**) * st->subroutine_var_count)
+            : realloc(st->subroutine_vars, sizeof(char**) * st->subroutine_var_count);
         st->subroutine_vars = newAddr;
 
         buf[1] = '\0';
