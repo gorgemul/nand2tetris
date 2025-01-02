@@ -40,7 +40,7 @@ char *get_o_stream_path(char *i_stream_path)
     memcpy(buf, i_stream_path, no_suffix_len);
     buf[no_suffix_len] = '\0';
 
-    strcat(buf, "Test.xml");
+    strcat(buf, ".vm");
 
     return buf;
 }

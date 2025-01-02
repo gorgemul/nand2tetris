@@ -183,7 +183,7 @@ int has_more_token(FILE *stream)
     return feof(stream) ? 0 : 1;
 }
 
-void getToken(FILE *stream, Token *token)
+void get_token(FILE *stream, Token *token)
 {
     long og_pos = ftell(stream);
 

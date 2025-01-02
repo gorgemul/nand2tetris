@@ -44,4 +44,27 @@ typedef enum {
     VAR,
 } VarKind;
 
+typedef enum {
+    SEG_CONST,
+    SEG_ARG,
+    SEG_LOCAL,
+    SEG_STATIC,
+    SEG_THIS,
+    SEG_THAT,
+    SEG_POINTER,
+    SEG_TEMP,
+} Segment;
+
+typedef enum {
+    ADD,
+    SUB,
+    NEG,
+    EQ,
+    GT,
+    LT,
+    AND,
+    OR,
+    NOT,
+} Operator;
+
 #endif

@@ -5,6 +5,6 @@
 #include <stdio.h>
 
 int has_more_token(FILE *stream);
-void getToken(FILE *stream, Token *token);
+void get_token(FILE *stream, Token *token);
 
 #endif
