@@ -12,6 +12,8 @@ char g_type = ' '; // first char of type: <int | char | boolean | className>
 char g_current_class_type[MAX_VAR_NAME];
 int g_is_dec = 0;
 
+int g_branching_counter = 0;
+
 char *resolve_kind_name(VarKind kind, Token *token)
 {
     char *buf = malloc(sizeof(*buf) * MAX_VAR_NAME);
@@ -37,6 +39,18 @@ char *resolve_kind_name(VarKind kind, Token *token)
     }
 
     return buf;
+}
+
+Segment get_segment_type(char *var_name)
+{
+    VarKind kind = get_var_kind(g_st, var_name);
+
+    if (kind == STATIC) return SEG_STATIC;
+    if (kind == FIELD)  return SEG_THIS;
+    if (kind == ARG)    return SEG_ARG;
+    if (kind == VAR)    return SEG_LOCAL;
+
+    return -1;
 }
 
 char peek_next_token_first_char(FILE *i_stream)
@@ -159,30 +173,6 @@ int has_more_operator(FILE *i_stream)
     }
 }
 
-// Since we are using xml, '<' AND '>' AND '&' would be escape
-/* char *escape_char(char c) */
-/* { */
-/*     char *buf = malloc(sizeof(*buf) * 16); */
-
-/*     switch (c) { */
-/*     case '<': */
-/*         strcat(buf, "&lt;"); */
-/*         break; */
-/*     case '>': */
-/*         strcat(buf, "&gt;"); */
-/*         break; */
-/*     case '&': */
-/*         strcat(buf, "&amp;"); */
-/*         break; */
-/*     default: */
-/*         buf[0] = c; */
-/*         buf[1] = '\0'; */
-/*         break; */
-/*     } */
-
-/*     return buf; */
-/* } */
-
 int is_primitive_type(Token *token)
 {
     if (strcmp(token->value, "int") == 0 ||
@@ -195,40 +185,48 @@ int is_primitive_type(Token *token)
     return 0;
 }
 
+int is_keyword_const(char *keyword)
+{
+    if (strcmp(keyword, "true") == 0 ||
+        strcmp(keyword, "false") == 0 ||
+        strcmp(keyword, "null") == 0 ||
+        strcmp(keyword, "this") == 0
+    ) {
+        return 1;
+    }
+
+    return 0;
+}
+
+void write_keyword_constant(FILE *o_stream, char *keyword)
+{
+    if (strcmp(keyword, "true") == 0) {
+        write_push(o_stream, SEG_CONST, 0);
+        write_arithmetic(o_stream, NOT);
+    } else if (strcmp(keyword, "false") == 0) {
+        write_push(o_stream, SEG_CONST, 0);
+    } else if (strcmp(keyword, "null") == 0) { // TODO:
+    } else if (strcmp(keyword, "this") == 0) {
+        write_push(o_stream, SEG_THIS, 0);
+    }
+}
+
 void write_identifier(FILE *o_stream, Token *token)
 {
     int is_var_dec = (g_kind != NOT_VAR);
-    char usage[16] = {0};
-    char *kind_str = NULL;
     int is_class_type = is_var_dec && (token->value[0] >= 'A' && token->value[0] <= 'Z') && (token->value[0] == g_type);
 
     if (is_class_type) {
-        fprintf(o_stream, "<class-used> %s </class-used>\n", token->value);
         strcpy(g_current_class_type, token->value);
         return;
     }
 
-    strcat(usage, g_is_dec ? "dec" : "used");
-    kind_str = resolve_kind_name(g_kind, token);
-
     if (is_var_dec) {
-        int index = get_var_count(g_st, g_kind);
-
         add_var(g_st, token->value, g_current_class_type, g_kind);
-        fprintf(o_stream, "<%s-%d-%s> %s </%s-%d-%s>\n", kind_str, index, usage, token->value, kind_str, index, usage);
     } else {
         int index = get_var_index(g_st, token->value);
-
-        if (index == -1) {
-            fprintf(o_stream, "<%s-%s> %s </%s-%s>\n", kind_str, usage, token->value, kind_str, usage);
-        } else {
-            char *new_kind_str = resolve_kind_name(get_var_kind(g_st, token->value), token);
-            fprintf(o_stream, "<%s-%d-%s> %s </%s-%d-%s>\n", new_kind_str, index, usage, token->value, new_kind_str, index, usage);
-            free(new_kind_str);
-        }
+        if (index >= 0) write_push(o_stream, get_segment_type(token->value), index);
     }
-
-    free(kind_str);
 }
 
 void compile_token(FILE *o_stream, Token *token)
@@ -236,7 +234,11 @@ void compile_token(FILE *o_stream, Token *token)
     switch (token->type) {
     case KEYWORD:
         /* fprintf_with_depth(o_stream, "<keyword> %s </keyword>\n", token->value); */
-        /* if (is_primitive_type(token)) strcpy(g_current_class_type, token->value); */
+        if (is_primitive_type(token)) {
+            strcpy(g_current_class_type, token->value);
+        } else if (is_keyword_const(token->value)) {
+            write_keyword_constant(o_stream, token->value);
+        }
         return;
     case SYMBOL:
         /* fprintf_with_depth(o_stream, "<symbol> %s </symbol>\n", buf); */
@@ -283,19 +285,7 @@ Operator get_op_type(char op)
     }
 }
 
-Segment get_segment_type(char *var_name)
-{
-    VarKind kind = get_var_kind(g_st, var_name);
-
-    if (kind == STATIC) return SEG_STATIC;
-    if (kind == FIELD)  return SEG_THIS;
-    if (kind == ARG)    return SEG_ARG;
-    if (kind == VAR)    return SEG_LOCAL;
-
-    return -1;
-}
-
-char *get_function_name(char *name)
+char *resolve_function_name(char *name)
 {
     static char buf[0xFF] = {0};
 
@@ -329,7 +319,17 @@ void write_syscall_op(FILE *o_stream, char op)
     fprintf(o_stream, "call Math.%s 2\n", op == '*' ? "multiply" : "divide");
 }
 
-// NOTE: Maybe change it to vm writer only tokens
+char *get_label_name(char *name, int index)
+{
+    static char buf[0xFF] = {0};
+
+    memset(buf, 0, sizeof(buf));
+
+    sprintf(buf, "%s#%d", name, index);
+
+    return buf;
+}
+
 void compile_next_token(FILE *i_stream, FILE *o_stream)
 {
     static Token token = {0};
@@ -374,6 +374,10 @@ void compile_term(FILE *i_stream, FILE *o_stream)
         return;
     }
 
+    Token token1 = {0};
+    Token token2 = {0};
+    int exp_counter = 0;
+
     switch (peek_next_next_token_first_char(i_stream)) {
     case '[':
         compile_next_token(i_stream, o_stream); // varName
@@ -388,12 +392,13 @@ void compile_term(FILE *i_stream, FILE *o_stream)
         compile_next_token(i_stream, o_stream); // )
         break;
     case '.':
-        compile_next_token(i_stream, o_stream); // subroutineName | className | varName
-        compile_next_token(i_stream, o_stream); // .
-        compile_next_token(i_stream, o_stream); // subroutineName
-        compile_next_token(i_stream, o_stream); // (
-        compile_expression_list(i_stream, o_stream, NULL);
-        compile_next_token(i_stream, o_stream); // )
+        if (has_more_token(i_stream)) get_token(i_stream, &token1); // className | varName
+        advance(i_stream); // .
+        if (has_more_token(i_stream)) get_token(i_stream, &token2); // subroutineName
+        advance(i_stream); // (
+        compile_expression_list(i_stream, o_stream, &exp_counter);
+        advance(i_stream); // )
+        write_call(o_stream, get_call_function_name(token1.value, token2.value), exp_counter);
         break;
     default:
         compile_next_token(i_stream, o_stream); // everything else
@@ -437,30 +442,45 @@ void compile_let_statement(FILE *i_stream, FILE *o_stream)
 
 void compile_if_statement(FILE *i_stream, FILE *o_stream)
 {
-    compile_next_token(i_stream, o_stream); // if
-    compile_next_token(i_stream, o_stream); // (
+    int index = ++g_branching_counter;
+    advance(i_stream); // if
+    advance(i_stream); // (
     compile_expression(i_stream, o_stream);
-    compile_next_token(i_stream, o_stream); // )
-    compile_next_token(i_stream, o_stream); // {
+    advance(i_stream); // )
+    write_if(o_stream, get_label_name("IF_TRUE", index));
+    write_goto(o_stream, get_label_name("IF_FALSE", index));
+    write_label(o_stream, get_label_name("IF_TRUE", index));
+    advance(i_stream); // {
     compile_statements(i_stream, o_stream);
-    compile_next_token(i_stream, o_stream); // }
+    advance(i_stream); // }
     if (has_else_condition(i_stream)) {
-        compile_next_token(i_stream, o_stream); // else
-        compile_next_token(i_stream, o_stream); // {
+        write_goto(o_stream, get_label_name("IF_END", index));
+        write_label(o_stream, get_label_name("IF_FALSE", index));
+        advance(i_stream); // else
+        advance(i_stream); // {
         compile_statements(i_stream, o_stream);
-        compile_next_token(i_stream, o_stream); // }
+        advance(i_stream); // }
+        write_label(o_stream, get_label_name("IF_END", index));
+    } else {
+        write_label(o_stream, get_label_name("IF_FALSE", index));
     }
 }
 
 void compile_while_statement(FILE *i_stream, FILE *o_stream)
 {
-    compile_next_token(i_stream, o_stream); // while
-    compile_next_token(i_stream, o_stream); // (
+    int index = ++g_branching_counter;
+    write_label(o_stream, get_label_name("WHILE_LOOP", index));
+    advance(i_stream); // while
+    advance(i_stream); // (
     compile_expression(i_stream, o_stream);
-    compile_next_token(i_stream, o_stream); // )
-    compile_next_token(i_stream, o_stream); // {
+    advance(i_stream); // )
+    write_arithmetic(o_stream, NOT);
+    write_if(o_stream, get_label_name("END_WHILE", index));
+    advance(i_stream); // {
     compile_statements(i_stream, o_stream);
-    compile_next_token(i_stream, o_stream); // }
+    write_goto(o_stream, get_label_name("WHILE_LOOP", index));
+    advance(i_stream); // }
+    write_label(o_stream, get_label_name("END_WHILE", index));
 }
 
 void compile_do_statement(FILE *i_stream, FILE *o_stream)
@@ -536,16 +556,18 @@ void compile_statements(FILE *i_stream, FILE *o_stream)
     }
 }
 
-void compile_var_dec(FILE *i_stream, FILE *o_stream)
+void compile_var_dec(FILE *i_stream, FILE *o_stream, int *local_var_counter)
 {
     g_kind = VAR;
     g_type = peek_next_next_token_first_char(i_stream);
     g_is_dec = 1;
 
+    (*local_var_counter)++;
     advance(i_stream); // var
     advance(i_stream); // type
     compile_next_token(i_stream, o_stream); // varName
     while (peek_next_token_first_char(i_stream) == ',') {
+        (*local_var_counter)++;
         advance(i_stream); // ,
         compile_next_token(i_stream, o_stream); // varName
     }
@@ -555,19 +577,16 @@ void compile_var_dec(FILE *i_stream, FILE *o_stream)
     g_kind = NOT_VAR;
 }
 
-void compile_parameter_list(FILE *i_stream, FILE *o_stream, int *param_counter)
+void compile_parameter_list(FILE *i_stream, FILE *o_stream)
 {
     if (peek_next_token_first_char(i_stream) == ')') goto end;
 
     g_kind = ARG;
     g_type = peek_next_token_first_char(i_stream);
     g_is_dec = 1;
-    (*param_counter)++;
     advance(i_stream); // type
-    advance(i_stream); // varName
+    compile_next_token(i_stream, o_stream); // varName
     while (peek_next_token_first_char(i_stream) == ',') {
-        (*param_counter)++;
-
         advance(i_stream); // ,
         g_type = peek_next_token_first_char(i_stream);
         advance(i_stream); // type
@@ -579,10 +598,14 @@ end:
     g_kind = NOT_VAR;
 }
 
-void compile_subroutine_body(FILE *i_stream, FILE *o_stream)
+void compile_subroutine_body(FILE *i_stream, FILE *o_stream, char *func_name)
 {
+    int local_var_counter = 0;
     advance(i_stream); // {
-    while (has_more_var_dec(i_stream)) compile_var_dec(i_stream, o_stream);
+    while (has_more_var_dec(i_stream)) compile_var_dec(i_stream, o_stream, &local_var_counter);
+
+    write_function(o_stream, resolve_function_name(func_name), local_var_counter);
+
     compile_statements(i_stream, o_stream);
     advance(i_stream); // }
 }
@@ -590,7 +613,6 @@ void compile_subroutine_body(FILE *i_stream, FILE *o_stream)
 void compile_subroutine_dec(FILE *i_stream, FILE *o_stream)
 {
     Token token = {0};
-    int param_counter = 0;
     g_type = peek_next_next_token_first_char(i_stream);
     g_is_dec = 1;
 
@@ -600,12 +622,11 @@ void compile_subroutine_dec(FILE *i_stream, FILE *o_stream)
     if (has_more_token(i_stream)) get_token(i_stream, &token); // subroutineName
 
     advance(i_stream); // (
-    compile_parameter_list(i_stream, o_stream, &param_counter);
+    compile_parameter_list(i_stream, o_stream);
     advance(i_stream); // )
-    write_function(o_stream, get_function_name(token.value), param_counter);
 
     g_is_dec = 0;
-    compile_subroutine_body(i_stream, o_stream);
+    compile_subroutine_body(i_stream, o_stream, token.value);
 
     destruct_subroutine_vars(g_st);
 }

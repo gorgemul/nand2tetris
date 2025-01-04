@@ -95,6 +95,21 @@ void write_arithmetic(FILE *o_stream, Operator op)
     fprintf(o_stream, "%s\n", op_to_str(op));
 }
 
+void write_label(FILE *o_stream, char *label_name)
+{
+    fprintf(o_stream, "label %s\n", label_name);
+}
+
+void write_goto(FILE *o_stream, char *label_name)
+{
+    fprintf(o_stream, "goto %s\n", label_name);
+}
+
+void write_if(FILE *o_stream, char *label_name)
+{
+    fprintf(o_stream, "if-goto %s\n", label_name);
+}
+
 void write_call(FILE *o_stream, char *name, int argc)
 {
     fprintf(o_stream, "call %s %d\n", name, argc);
