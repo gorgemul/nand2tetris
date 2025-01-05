@@ -7,7 +7,7 @@ $(EXE): $(SRC)
 	$(CC) $(CFLAGS) -o $@ $^
 
 run: $(EXE)
-	$(EXE) ./provied_test/Average
+	$(EXE) ./provied_test/Pong
 
 .PHONY: clean
 clean:

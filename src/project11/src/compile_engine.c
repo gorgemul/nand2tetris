@@ -15,6 +15,9 @@ int g_is_dec = 0;
 int g_field_counter = 0;
 int g_branching_counter = 0;
 
+// NOTE:
+int g_debug_subroutine_count = 0;
+
 char *resolve_kind_name(VarKind kind, Token *token)
 {
     char *buf = malloc(sizeof(*buf) * MAX_VAR_NAME);
@@ -433,22 +436,22 @@ void compile_term(FILE *i_stream, FILE *o_stream)
         break;
     case '(':
         if (has_more_token(i_stream)) get_token(i_stream, &token1); // subroutineName | className | varName
+        write_push(o_stream, SEG_POINTER, 0);
         advance(i_stream); // (
         compile_expression_list(i_stream, o_stream, &exp_counter);
         advance(i_stream); // )
-        write_push(o_stream, SEG_POINTER, 0);
         write_call(o_stream, get_call_function_name(g_st->class_name, token1.value), exp_counter+1);
         break;
     case '.':
         if (has_more_token(i_stream)) get_token(i_stream, &token1); // className | varName
+        var_index = get_var_index(g_st, token1.value);
+        if (var_index != -1) write_push(o_stream, get_segment_type(token1.value), var_index);
         advance(i_stream); // .
         if (has_more_token(i_stream)) get_token(i_stream, &token2); // subroutineName
         advance(i_stream); // (
         compile_expression_list(i_stream, o_stream, &exp_counter);
         advance(i_stream); // )
-        var_index = get_var_index(g_st, token1.value);
         if (var_index != -1) {
-            write_push(o_stream, get_segment_type(token1.value), var_index);
             write_call(o_stream, get_call_function_name(get_var_type(g_st, token1.value), token2.value), exp_counter+1);
         } else {
             write_call(o_stream, get_call_function_name(token1.value, token2.value), exp_counter);
@@ -584,21 +587,21 @@ void compile_do_statement(FILE *i_stream, FILE *o_stream)
 
     switch (peek_next_token_first_char(i_stream)) {
     case '(':
+        write_push(o_stream, SEG_POINTER, 0);
         advance(i_stream); // (
         compile_expression_list(i_stream, o_stream, &exp_counter);
         advance(i_stream); // )
-        write_push(o_stream, SEG_POINTER, 0);
         write_call(o_stream, get_call_function_name(g_st->class_name, token1.value), exp_counter+1);
         break;
     case '.':
+        var_index = get_var_index(g_st, token1.value);
+        if (var_index != -1) write_push(o_stream, get_segment_type(token1.value), var_index);
         advance(i_stream); // .
         if (has_more_token(i_stream)) get_token(i_stream, &token2); // subroutineName
         advance(i_stream); // (
         compile_expression_list(i_stream, o_stream, &exp_counter);
         advance(i_stream); // )
-        var_index = get_var_index(g_st, token1.value);
         if (var_index != -1) {
-            write_push(o_stream, get_segment_type(token1.value), var_index);
             write_call(o_stream, get_call_function_name(get_var_type(g_st, token1.value), token2.value), exp_counter+1);
         } else {
             write_call(o_stream, get_call_function_name(token1.value, token2.value), exp_counter);
@@ -673,8 +676,9 @@ void compile_var_dec(FILE *i_stream, FILE *o_stream, int *local_var_counter)
     g_kind = NOT_VAR;
 }
 
-void compile_parameter_list(FILE *i_stream, FILE *o_stream)
+void compile_parameter_list(FILE *i_stream, FILE *o_stream, SubroutineType type)
 {
+    if (type == METHOD) add_var(g_st, "PLACEHOLDER", g_st->class_name, ARG);
     if (peek_next_token_first_char(i_stream) == ')') goto end;
 
     g_kind = ARG;
@@ -713,7 +717,7 @@ void compile_subroutine_body(FILE *i_stream, FILE *o_stream, SubroutineType type
 void compile_subroutine_dec(FILE *i_stream, FILE *o_stream)
 {
     Token token = {0};
-    char c = peek_next_token_first_char(i_stream);
+    SubroutineType type = get_subroutine_type(peek_next_token_first_char(i_stream));
     g_type = peek_next_next_token_first_char(i_stream);
     g_is_dec = 1;
 
@@ -723,12 +727,13 @@ void compile_subroutine_dec(FILE *i_stream, FILE *o_stream)
     if (has_more_token(i_stream)) get_token(i_stream, &token); // subroutineName
 
     advance(i_stream); // (
-    compile_parameter_list(i_stream, o_stream);
+    compile_parameter_list(i_stream, o_stream, type);
     advance(i_stream); // )
 
     g_is_dec = 0;
-    compile_subroutine_body(i_stream, o_stream, get_subroutine_type(c), token.value);
+    compile_subroutine_body(i_stream, o_stream, type, token.value);
 
+    g_debug_subroutine_count++;
     destruct_subroutine_vars(g_st);
 }
 

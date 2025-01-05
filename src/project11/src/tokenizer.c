@@ -5,11 +5,16 @@
 
 void skip_to_line_after_comment_end(FILE *stream)
 {
+    int line_count = 0;
     char line[LINE_MAX_LENGTH] = {0};
 
     while (fgets(line, sizeof(line), stream)) {
+        line_count++;
         char *comment_symbol = strchr(line, '/');
-        if (comment_symbol) break;
+        if (comment_symbol && line_count == 1) break;
+        char *star_symbol = strchr(line, '*');
+        int is_star_before_slash = (comment_symbol - star_symbol) == 1;
+        if (comment_symbol && star_symbol && is_star_before_slash) break;
     }
 }
 
@@ -106,16 +111,23 @@ int get_first_symbol_index(char *word)
 
 char *get_word(FILE *stream)
 {
+    char *buf = NULL;
     char line[LINE_MAX_LENGTH] = {0};
 
     fgets(line, sizeof(line), stream);
 
-    char *end = strpbrk(line, " \n");
-    int token_len = end - line;
+    if (strlen(line) == 1) {
+        buf = malloc(sizeof(*buf) * 2);
+        buf[0] = line[0];
+        buf[1] = '\0';
+    } else {
+        char *end = strpbrk(line, " \n");
+        int token_len = end - line;
 
-    char *buf = malloc(sizeof(*buf) * token_len+1);
-    memcpy(buf, line, token_len);
-    buf[token_len] = '\0';
+        buf = malloc(sizeof(*buf) * token_len+1);
+        memcpy(buf, line, token_len);
+        buf[token_len] = '\0';
+    }
 
     return buf;
 }
