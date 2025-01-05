@@ -233,7 +233,8 @@ void write_keyword_constant(FILE *o_stream, char *keyword)
         write_arithmetic(o_stream, NOT);
     } else if (strcmp(keyword, "false") == 0) {
         write_push(o_stream, SEG_CONST, 0);
-    } else if (strcmp(keyword, "null") == 0) { // TODO:
+    } else if (strcmp(keyword, "null") == 0) {
+        write_push(o_stream, SEG_CONST, 0);
     } else if (strcmp(keyword, "this") == 0) {
         write_push(o_stream, SEG_POINTER, 0);
     }
@@ -479,49 +480,31 @@ void compile_expression(FILE *i_stream, FILE *o_stream)
 
 void compile_let_statement(FILE *i_stream, FILE *o_stream)
 {
+    int is_lvalue_arr = 0;
     Token token = {0};
 
     advance(i_stream); // let
     if (has_more_token(i_stream)) get_token(i_stream, &token); // varName
 
     if (peek_next_token_first_char(i_stream) == '[') {
+        is_lvalue_arr = 1;
         compile_token(o_stream, &token);
         advance(i_stream); // [
         compile_expression(i_stream, o_stream);
         advance(i_stream); // ]
         write_arithmetic(o_stream, ADD);
-        advance(i_stream); // =
+    }
 
-        if (peek_next_next_token_first_char(i_stream) == '[') {
-            compile_next_token(i_stream, o_stream);
-            advance(i_stream); // [
-            compile_expression(i_stream, o_stream);
-            advance(i_stream); // ]
-            write_arithmetic(o_stream, ADD);
-            write_pop(o_stream, SEG_POINTER, 1);
-            write_push(o_stream, SEG_THAT, 0);
-        } else {
-            compile_expression(i_stream, o_stream);
-        }
+    advance(i_stream); // =
 
+    compile_expression(i_stream, o_stream);
+
+    if (is_lvalue_arr) {
         write_pop(o_stream, SEG_TEMP, 0);
         write_pop(o_stream, SEG_POINTER, 1);
         write_push(o_stream, SEG_TEMP, 0);
         write_pop(o_stream, SEG_THAT, 0);
     } else {
-        advance(i_stream); // =
-        if (peek_next_next_token_first_char(i_stream) == '[') {
-            compile_next_token(i_stream, o_stream);
-            advance(i_stream); // [
-            compile_expression(i_stream, o_stream);
-            advance(i_stream); // ]
-            write_arithmetic(o_stream, ADD);
-            write_pop(o_stream, SEG_POINTER, 1);
-            write_push(o_stream, SEG_THAT, 0);
-        } else {
-            compile_expression(i_stream, o_stream);
-        }
-
         write_pop(o_stream, get_segment_type(token.value), get_var_index(g_st, token.value));
     }
 
