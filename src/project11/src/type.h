@@ -67,4 +67,10 @@ typedef enum {
     NOT,
 } Operator;
 
+typedef enum {
+    CONSTRUCTOR,
+    FUNCTION,
+    METHOD,
+} SubroutineType;
+
 #endif

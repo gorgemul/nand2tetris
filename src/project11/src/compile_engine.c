@@ -12,6 +12,7 @@ char g_type = ' '; // first char of type: <int | char | boolean | className>
 char g_current_class_type[MAX_VAR_NAME];
 int g_is_dec = 0;
 
+int g_field_counter = 0;
 int g_branching_counter = 0;
 
 char *resolve_kind_name(VarKind kind, Token *token)
@@ -51,6 +52,20 @@ Segment get_segment_type(char *var_name)
     if (kind == VAR)    return SEG_LOCAL;
 
     return -1;
+}
+
+SubroutineType get_subroutine_type(char c)
+{
+    switch (c) {
+    case 'c':
+        return CONSTRUCTOR;
+    case 'f':
+        return FUNCTION;
+    case 'm':
+        return METHOD;
+    default:
+        return -1;
+    }
 }
 
 char peek_next_token_first_char(FILE *i_stream)
@@ -198,6 +213,19 @@ int is_keyword_const(char *keyword)
     return 0;
 }
 
+void write_constructor(FILE *o_stream)
+{
+    write_push(o_stream, SEG_CONST, g_field_counter);
+    write_call(o_stream, "Memory.alloc", 1);
+    write_pop(o_stream, SEG_POINTER, 0);
+}
+
+void write_method(FILE *o_stream)
+{
+    write_push(o_stream, SEG_ARG, 0);
+    write_pop(o_stream, SEG_POINTER, 0);
+}
+
 void write_keyword_constant(FILE *o_stream, char *keyword)
 {
     if (strcmp(keyword, "true") == 0) {
@@ -207,7 +235,7 @@ void write_keyword_constant(FILE *o_stream, char *keyword)
         write_push(o_stream, SEG_CONST, 0);
     } else if (strcmp(keyword, "null") == 0) { // TODO:
     } else if (strcmp(keyword, "this") == 0) {
-        write_push(o_stream, SEG_THIS, 0);
+        write_push(o_stream, SEG_POINTER, 0);
     }
 }
 
@@ -377,6 +405,7 @@ void compile_term(FILE *i_stream, FILE *o_stream)
     Token token1 = {0};
     Token token2 = {0};
     int exp_counter = 0;
+    int var_index = 0;
 
     switch (peek_next_next_token_first_char(i_stream)) {
     case '[':
@@ -386,10 +415,12 @@ void compile_term(FILE *i_stream, FILE *o_stream)
         compile_next_token(i_stream, o_stream); // ]
         break;
     case '(':
-        compile_next_token(i_stream, o_stream); // subroutineName | className | varName
-        compile_next_token(i_stream, o_stream); // (
-        compile_expression_list(i_stream, o_stream, NULL);
-        compile_next_token(i_stream, o_stream); // )
+        if (has_more_token(i_stream)) get_token(i_stream, &token1); // subroutineName | className | varName
+        advance(i_stream); // (
+        compile_expression_list(i_stream, o_stream, &exp_counter);
+        advance(i_stream); // )
+        write_push(o_stream, SEG_POINTER, 0);
+        write_call(o_stream, get_call_function_name(g_st->class_name, token1.value), exp_counter+1);
         break;
     case '.':
         if (has_more_token(i_stream)) get_token(i_stream, &token1); // className | varName
@@ -398,7 +429,13 @@ void compile_term(FILE *i_stream, FILE *o_stream)
         advance(i_stream); // (
         compile_expression_list(i_stream, o_stream, &exp_counter);
         advance(i_stream); // )
-        write_call(o_stream, get_call_function_name(token1.value, token2.value), exp_counter);
+        var_index = get_var_index(g_st, token1.value);
+        if (var_index != -1) {
+            write_push(o_stream, get_segment_type(token1.value), var_index);
+            write_call(o_stream, get_call_function_name(get_var_type(g_st, token1.value), token2.value), exp_counter+1);
+        } else {
+            write_call(o_stream, get_call_function_name(token1.value, token2.value), exp_counter);
+        }
         break;
     default:
         compile_next_token(i_stream, o_stream); // everything else
@@ -485,6 +522,7 @@ void compile_while_statement(FILE *i_stream, FILE *o_stream)
 
 void compile_do_statement(FILE *i_stream, FILE *o_stream)
 {
+    int var_index = 0;
     int exp_counter = 0;
     Token token1 = {0};
     Token token2 = {0};
@@ -498,7 +536,8 @@ void compile_do_statement(FILE *i_stream, FILE *o_stream)
         advance(i_stream); // (
         compile_expression_list(i_stream, o_stream, &exp_counter);
         advance(i_stream); // )
-        write_call(o_stream, get_call_function_name(NULL, token1.value), exp_counter);
+        write_push(o_stream, SEG_POINTER, 0);
+        write_call(o_stream, get_call_function_name(g_st->class_name, token1.value), exp_counter+1);
         break;
     case '.':
         advance(i_stream); // .
@@ -506,7 +545,13 @@ void compile_do_statement(FILE *i_stream, FILE *o_stream)
         advance(i_stream); // (
         compile_expression_list(i_stream, o_stream, &exp_counter);
         advance(i_stream); // )
-        write_call(o_stream, get_call_function_name(token1.value, token2.value), exp_counter);
+        var_index = get_var_index(g_st, token1.value);
+        if (var_index != -1) {
+            write_push(o_stream, get_segment_type(token1.value), var_index);
+            write_call(o_stream, get_call_function_name(get_var_type(g_st, token1.value), token2.value), exp_counter+1);
+        } else {
+            write_call(o_stream, get_call_function_name(token1.value, token2.value), exp_counter);
+        }
         break;
     default:
         break;
@@ -564,7 +609,7 @@ void compile_var_dec(FILE *i_stream, FILE *o_stream, int *local_var_counter)
 
     (*local_var_counter)++;
     advance(i_stream); // var
-    advance(i_stream); // type
+    compile_next_token(i_stream, o_stream); // type
     compile_next_token(i_stream, o_stream); // varName
     while (peek_next_token_first_char(i_stream) == ',') {
         (*local_var_counter)++;
@@ -584,12 +629,13 @@ void compile_parameter_list(FILE *i_stream, FILE *o_stream)
     g_kind = ARG;
     g_type = peek_next_token_first_char(i_stream);
     g_is_dec = 1;
-    advance(i_stream); // type
+
+    compile_next_token(i_stream, o_stream); // type
     compile_next_token(i_stream, o_stream); // varName
     while (peek_next_token_first_char(i_stream) == ',') {
         advance(i_stream); // ,
         g_type = peek_next_token_first_char(i_stream);
-        advance(i_stream); // type
+        compile_next_token(i_stream, o_stream); // type
         compile_next_token(i_stream, o_stream); // varName
     }
 
@@ -598,13 +644,16 @@ end:
     g_kind = NOT_VAR;
 }
 
-void compile_subroutine_body(FILE *i_stream, FILE *o_stream, char *func_name)
+void compile_subroutine_body(FILE *i_stream, FILE *o_stream, SubroutineType type , char *func_name)
 {
     int local_var_counter = 0;
     advance(i_stream); // {
     while (has_more_var_dec(i_stream)) compile_var_dec(i_stream, o_stream, &local_var_counter);
 
     write_function(o_stream, resolve_function_name(func_name), local_var_counter);
+
+    if (type == CONSTRUCTOR) write_constructor(o_stream);
+    if (type == METHOD) write_method(o_stream);
 
     compile_statements(i_stream, o_stream);
     advance(i_stream); // }
@@ -613,6 +662,7 @@ void compile_subroutine_body(FILE *i_stream, FILE *o_stream, char *func_name)
 void compile_subroutine_dec(FILE *i_stream, FILE *o_stream)
 {
     Token token = {0};
+    char c = peek_next_token_first_char(i_stream);
     g_type = peek_next_next_token_first_char(i_stream);
     g_is_dec = 1;
 
@@ -626,7 +676,7 @@ void compile_subroutine_dec(FILE *i_stream, FILE *o_stream)
     advance(i_stream); // )
 
     g_is_dec = 0;
-    compile_subroutine_body(i_stream, o_stream, token.value);
+    compile_subroutine_body(i_stream, o_stream, get_subroutine_type(c), token.value);
 
     destruct_subroutine_vars(g_st);
 }
@@ -638,10 +688,12 @@ void compile_class_var_dec(FILE *i_stream, FILE *o_stream)
     g_is_dec = 1;
 
     advance(i_stream);  // static | field
-    advance(i_stream);  // type
+    compile_next_token(i_stream, o_stream); // type
+    if (g_kind == FIELD) g_field_counter++;
     compile_next_token(i_stream, o_stream); // varName
     while (peek_next_token_first_char(i_stream) == ',') {
         advance(i_stream); // ,
+        if (g_kind == FIELD) g_field_counter++;
         compile_next_token(i_stream, o_stream); // varName
     }
 
@@ -664,5 +716,7 @@ void compile_class(FILE *i_stream, FILE *o_stream)
     advance(i_stream); // }
 
     destruct_symbol_table(g_st);
+    g_branching_counter = 0;
+    g_field_counter = 0;
     g_st = NULL;
 }

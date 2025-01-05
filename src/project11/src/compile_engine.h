@@ -7,8 +7,8 @@
 void compile_class(FILE *i_stream, FILE *o_stream);
 void compile_class_var_dec(FILE *i_stream, FILE *o_stream);
 void compile_subroutine_dec(FILE *i_stream, FILE *o_stream);
-void compile_parameter_list(FILE *i_stream, FILE *o_strea);
-void compile_subroutine_body(FILE *i_stream, FILE *o_stream, char *func_name);
+void compile_parameter_list(FILE *i_stream, FILE *o_stream);
+void compile_subroutine_body(FILE *i_stream, FILE *o_stream, SubroutineType type , char *func_name);
 void compile_var_dec(FILE *i_stream, FILE *o_stream, int *local_var_counter);
 
 void compile_statements(FILE *i_stream, FILE *o_stream);
