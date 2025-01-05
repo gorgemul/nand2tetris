@@ -15,9 +15,6 @@ int g_is_dec = 0;
 int g_field_counter = 0;
 int g_branching_counter = 0;
 
-// NOTE:
-int g_debug_subroutine_count = 0;
-
 char *resolve_kind_name(VarKind kind, Token *token)
 {
     char *buf = malloc(sizeof(*buf) * MAX_VAR_NAME);
@@ -733,7 +730,6 @@ void compile_subroutine_dec(FILE *i_stream, FILE *o_stream)
     g_is_dec = 0;
     compile_subroutine_body(i_stream, o_stream, type, token.value);
 
-    g_debug_subroutine_count++;
     destruct_subroutine_vars(g_st);
 }
 
