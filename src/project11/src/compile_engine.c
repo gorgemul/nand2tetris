@@ -257,6 +257,19 @@ void write_identifier(FILE *o_stream, Token *token)
     }
 }
 
+void write_string_const(FILE *o_stream, Token *token)
+{
+    int str_len = strlen(token->value);
+
+    write_push(o_stream, SEG_CONST, str_len);
+    write_call(o_stream, "String.new", 1);
+
+    for (int i = 0; i < str_len; i++) {
+        write_push(o_stream, SEG_CONST, token->value[i]);
+        write_call(o_stream, "String.appendChar", 2);
+    }
+}
+
 void compile_token(FILE *o_stream, Token *token)
 {
     switch (token->type) {
@@ -278,6 +291,7 @@ void compile_token(FILE *o_stream, Token *token)
         write_push(o_stream, SEG_CONST, atoi(token->value));
         return;
     case STRING_CONST:
+        write_string_const(o_stream, token);
         return;
     }
 }
@@ -410,9 +424,12 @@ void compile_term(FILE *i_stream, FILE *o_stream)
     switch (peek_next_next_token_first_char(i_stream)) {
     case '[':
         compile_next_token(i_stream, o_stream); // varName
-        compile_next_token(i_stream, o_stream); // [
+        advance(i_stream); // [
         compile_expression(i_stream, o_stream);
-        compile_next_token(i_stream, o_stream); // ]
+        advance(i_stream); // ]
+        write_arithmetic(o_stream, ADD);
+        write_pop(o_stream, SEG_POINTER, 1);
+        write_push(o_stream, SEG_THAT, 0);
         break;
     case '(':
         if (has_more_token(i_stream)) get_token(i_stream, &token1); // subroutineName | className | varName
@@ -466,14 +483,48 @@ void compile_let_statement(FILE *i_stream, FILE *o_stream)
 
     advance(i_stream); // let
     if (has_more_token(i_stream)) get_token(i_stream, &token); // varName
-    if (peek_next_token_first_char(i_stream) == '[') { // TODO:
-        compile_next_token(i_stream, o_stream); // [
+
+    if (peek_next_token_first_char(i_stream) == '[') {
+        compile_token(o_stream, &token);
+        advance(i_stream); // [
         compile_expression(i_stream, o_stream);
-        compile_next_token(i_stream, o_stream); // ]
+        advance(i_stream); // ]
+        write_arithmetic(o_stream, ADD);
+        advance(i_stream); // =
+
+        if (peek_next_next_token_first_char(i_stream) == '[') {
+            compile_next_token(i_stream, o_stream);
+            advance(i_stream); // [
+            compile_expression(i_stream, o_stream);
+            advance(i_stream); // ]
+            write_arithmetic(o_stream, ADD);
+            write_pop(o_stream, SEG_POINTER, 1);
+            write_push(o_stream, SEG_THAT, 0);
+        } else {
+            compile_expression(i_stream, o_stream);
+        }
+
+        write_pop(o_stream, SEG_TEMP, 0);
+        write_pop(o_stream, SEG_POINTER, 1);
+        write_push(o_stream, SEG_TEMP, 0);
+        write_pop(o_stream, SEG_THAT, 0);
+    } else {
+        advance(i_stream); // =
+        if (peek_next_next_token_first_char(i_stream) == '[') {
+            compile_next_token(i_stream, o_stream);
+            advance(i_stream); // [
+            compile_expression(i_stream, o_stream);
+            advance(i_stream); // ]
+            write_arithmetic(o_stream, ADD);
+            write_pop(o_stream, SEG_POINTER, 1);
+            write_push(o_stream, SEG_THAT, 0);
+        } else {
+            compile_expression(i_stream, o_stream);
+        }
+
+        write_pop(o_stream, get_segment_type(token.value), get_var_index(g_st, token.value));
     }
-    advance(i_stream); // =
-    compile_expression(i_stream, o_stream);
-    write_pop(o_stream, get_segment_type(token.value), get_var_index(g_st, token.value));
+
     advance(i_stream); // ;
 }
 
